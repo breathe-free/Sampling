@@ -1,0 +1,4 @@
+*.pyc
+datafiles
+PiDatafiles
+Online/Pumps.py

@@ -1,0 +1,8 @@
+CO2 Sensor Connection Port = Com4
+pressure Sensor Connection Port = Com3
+Pump Controller Connection Port = Com10
+Total Test Time = 30
+Sensor Read Rate = 5
+Collection Control Level = p
+CO2 Trigger Limit = 3.2
+Pressure trigger Limit = 1000
