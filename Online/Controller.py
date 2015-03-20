@@ -7,6 +7,7 @@ import sys
 import time
 import socket
 import os
+import TriggerSetting
 
 
 class control:
@@ -91,14 +92,34 @@ class control:
         
         
         self.timeStart = time.time()
+        FileTime = time.time()
         timeS = [self.timeStart]
         self.collecting = 0
         print "time start is: %s" % self.timeStart
+        
         if sys.platform == "linux2":
             dataStore = r"/home/pi/datafiles/"
         else:
             dataStore = r"C:\Users\simon.kitchen\Documents\Software\Sandbox\Python\Test_rig\Sampling\datafiles\\"
-        self.dataFile = open(dataStore+str(int(self.timeStart))+".txt", 'w')
+        
+        
+        #Set up sampler settings and get breathing pattern:
+        setupFileName = dataStore+str(int(FileTime))+" SetupConfig.txt"
+        self.dataFile = open(setupFileName, 'w')
+        self.localLoop(10)    #callibration time, 30sec should allow 5 breaths, a good average
+        self.dataFile.close()
+        
+        triggerCal = TriggerSetting.TriggerCalcs()
+        TriggerVals = triggerCal.calculate(setupFileName)
+        self.sensors.CO2.triggerValue = TriggerVals.CT
+        self.sensors.Pressure.triggerValue = TriggerVals.PT
+        print TriggerVals.CT
+        print TriggerVals.PT
+        print "*******************************************"
+        raw_input()
+        
+        
+        self.dataFile = open(dataStore+str(int(FileTime))+".txt", 'w')
         #self.dataFile = open(str(int(self.timeStart))+".txt", 'w')
         
         if self.CO2DrawThrough == True:
@@ -112,7 +133,7 @@ class control:
             self.Grapher = RTP.graphing()
             self.Grapher.runGraphingLoop(self)
         elif self.displayGraphLocal == False:
-            self.localLoop()
+            self.localLoop(self.testLength)
             
         print "finished collecting"
         self.myPump.turnOnOff(0)
@@ -121,10 +142,10 @@ class control:
             self.sock.close()
         print "done!!!"
         
-    def localLoop(self):
+    def localLoop(self, testLength):
         self.timeStart = time.time()
         counter = 0
-        while time.time()-self.timeStart < self.testLength:
+        while time.time()-self.timeStart <= testLength:
             CO2, Pressure, timeStamp = self.sensors.getReadings(self)
             counter = counter + 1
             TS = float(counter)/self.secDivision - (time.time()-self.timeStart)
@@ -132,9 +153,7 @@ class control:
                 TS = 0
             time.sleep(TS)
         
-        
     
-
 if __name__ == '__main__':
     myControl = control()
     while True:

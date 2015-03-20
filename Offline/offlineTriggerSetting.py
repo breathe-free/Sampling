@@ -5,6 +5,7 @@ import os
 import re
 import numpy
 
+
 def smooth(x, window_len=9,window='blackman'):   # 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
     #if x.ndim != 1:
     #    raise ValueError, "smooth only accepts 1 dimension arrays."
@@ -177,15 +178,16 @@ def plotData(Data, extremeCO2, extremePressure, CO2Triggers, PressureTriggers):
     axPressure.set_ylabel("Pressure Pa", color = 'r')
     axCO2.plot(timeData, CO2Data, 'b-')
     
-    axCO2.plot[0, 30], []
+    axCO2.plot([timeData[0], timeData[-1]], [CO2Triggers, CO2Triggers], 'b-')
     axCO2.plot([pont[1] for pont in extremeCO2[0]], [pont[0] for pont in extremeCO2[0]], 'b^')  #EXTREMEco2[PEAK/TROUGH][LIST OF POINTS][data, time]
     axCO2.plot([pont[1] for pont in extremeCO2[1]], [pont[0] for pont in extremeCO2[1]], 'bv')
-    axCO2.
+    
     
     
     
     axPressure.plot(timeData, pressureData, 'r-')
     
+    axPressure.plot([timeData[0], timeData[-1]], [PressureTriggers, PressureTriggers], 'r-')
     axPressure.plot([pont[1] for pont in extremePressure[0]], [pont[0] for pont in extremePressure[0]], 'r^')
     axPressure.plot([pont[1] for pont in extremePressure[1]], [pont[0] for pont in extremePressure[1]], 'rv')
     

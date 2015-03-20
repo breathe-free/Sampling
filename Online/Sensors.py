@@ -16,11 +16,11 @@ class sensorList:
         timeStamp = time.time()
         if controls.controlSelection == "c" and CVal >= self.CO2.triggerValue:
             print "collecting"
-            controls.collecting = 1
+            controls.collecting = controls.sensors.CO2.triggerValue
     
         elif controls.controlSelection == "p" and PVal >= self.Pressure.triggerValue:
             print "collecting"
-            controls.collecting = 1
+            controls.collecting = controls.sensors.Pressure.triggerValue
     
         else:
             controls.collecting = 0
@@ -33,6 +33,7 @@ class sensorList:
         
         if controls.logging == True:
             print "writing file"
+            print dataString
             controls.dataFile.write(dataString)
         if controls.displayGraphRemote == True:
             

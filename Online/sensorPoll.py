@@ -10,11 +10,11 @@ def getReadings(controls, logging = True):          # this should be moved into 
     timeStamp = time.time()
     if controls.controlSelection == "c" and CVal >= controls.sensors.CO2.triggerValue:
         print "collecting"
-        controls.collecting = 1
+        controls.collecting = controls.sensors.CO2.triggerValue
 
     elif controls.controlSelection == "p" and PVal >= controls.sensors.Pressure.triggerValue:
         print "collecting"
-        controls.collecting = 1
+        controls.collecting = controls.sensors.Pressure.triggerValue
 
     else:
         controls.collecting = 0
