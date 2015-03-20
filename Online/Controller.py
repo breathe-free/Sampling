@@ -111,10 +111,10 @@ class control:
         
         triggerCal = TriggerSetting.TriggerCalcs()
         TriggerVals = triggerCal.calculate(setupFileName)
-        self.sensors.CO2.triggerValue = TriggerVals.CT
-        self.sensors.Pressure.triggerValue = TriggerVals.PT
-        print TriggerVals.CT
-        print TriggerVals.PT
+        self.sensors.CO2.triggerValue = TriggerVals[0]
+        self.sensors.Pressure.triggerValue = TriggerVals[1]
+        print TriggerVals[0]
+        print TriggerVals[1]
         print "*******************************************"
         raw_input()
         

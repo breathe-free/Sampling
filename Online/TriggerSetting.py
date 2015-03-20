@@ -178,7 +178,7 @@ class TriggerCalcs:
         CO2Triggers = self.setTriggerValues(CO2Limits)
         PressureTriggers = self.setTriggerValues(PressureLimits)
         
-        triggers = TriggerHolder(CO2Triggers, PressureTriggers)
+        triggers = [CO2Triggers, PressureTriggers] # TriggerHolder(CO2Triggers, PressureTriggers)
         
         return triggers
         
