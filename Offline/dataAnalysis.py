@@ -13,9 +13,9 @@ class dP:   #data point
 
 def getLatestData():
     
-    fileLoc = r"C:\Users\simon.kitchen\Documents\Software\Sandbox\Python\Test_rig\Sampling\datafiles"
-    #fileLoc = r"\\OWLSERV03\NewSTOUT\Server\temp\SK\LuCID\Pump and traps\trap flow test results complete"
-    
+    # Look for datafiles directory one level above this file's location
+    fileLoc = os.path.join(os.path.dirname(__file__), "..", "datafiles")
+
     fList = []
     for files in os.walk(fileLoc):
         for filenames in files:
