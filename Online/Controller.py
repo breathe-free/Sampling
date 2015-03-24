@@ -76,26 +76,26 @@ class control:
             self.testLength = int(raw_input("enter number of seconds to collect data: "))
         
 
-    def Runner(self):
+    def Runner(self, remoteComms):
         
-        
-        if self.displayGraphRemote == True:
-            print "connecting to socket"
-            server_address = '/tmp/lucidity.socket'
-
-            # Make sure the socket exists
-            if not os.path.exists(server_address):
-                raise Exception("No socket at %s" % server_address)
-            
-            # Create a UDS socket
-            self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            
-            # Try and connect to socket.  Output any error and fall over.
-            try:
-                self.sock.connect(server_address)
-            except socket.error, msg:
-                print >>sys.stderr, msg
-                sys.exit(1)
+        self.sock = remoteComms.sock
+        #if self.displayGraphRemote == True: #to delete
+        #    print "connecting to socket"
+        #    server_address = '/tmp/lucidity.socket'
+        #
+        #    # Make sure the socket exists
+        #    if not os.path.exists(server_address):
+        #        raise Exception("No socket at %s" % server_address)
+        #    
+        #    # Create a UDS socket
+        #    self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        #    
+        #    # Try and connect to socket.  Output any error and fall over.
+        #    try:
+        #        self.sock.connect(server_address)
+        #    except socket.error, msg:
+        #        print >>sys.stderr, msg
+        #        sys.exit(1)r
         
         
         
@@ -174,18 +174,66 @@ class control:
             if TS < 0:
                 TS = 0
             time.sleep(TS)
-        
     
-if __name__ == '__main__':
+class Communications:
+    def __init__(self):
+        print "connecting to socket"
+        server_address = '/tmp/lucidity.socket'
+
+        # Make sure the socket exists
+        if not os.path.exists(server_address):
+            raise Exception("No socket at %s" % server_address)
+        
+        # Create a UDS socket
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.setblocking(0)   # important - don't block on reads
+        
+        # Try and connect to socket.  Output any error and fall over.
+        try:
+            self.sock.connect(server_address)
+        except socket.error, msg:
+            print >>sys.stderr, msg
+            sys.exit(1)
+    def receive(self):
+        # Return either an empty string (if nothing received)
+        # or the contents of any incoming message
+        try:
+            return self.sock.recv(1024)
+        except socket.error:
+            return ""
+    
+    
+
+
+
+def mainProgram(remoteControl = True):
     myControl = control()
+    myComms = Communications()
+    
     while True:
-        myControl.Runner()
+    
+        while remoteControl == True:
+            #myComms loop until got a start command
+            commString = myComms.receive()
+            if commString.find("startsampling"):
+                break
+            time.sleep(1)
+    
+    
+        myControl.Runner(myComms)
         noInput = True
         while noInput == True:
             userInput = raw_input("Collection cycle complete, type r to repeat, or q to quit: ")
             if userInput == 'r':
                 noInput = False
             elif userInput == 'q':
+                myComms.sock.close()
                 sys.exit()
             else:
                 print "invalid arguement, please enter r or q"
+    
+
+if __name__ == '__main__':
+    remoteControl = False
+    mainProgram(remoteControl)
+    
