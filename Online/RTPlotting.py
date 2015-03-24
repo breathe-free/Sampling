@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #import Collector
-import sensorPoll
+#import sensorPoll
 
 import time
 from collections import deque
@@ -43,7 +43,7 @@ class graphing:
         PressureData = []
         for i in range(10*controls.secDivision):
             print "looping for calibration: %d" % i
-            CO2, Pressure, timeStamp = sensorPoll.getReadings(controls, logging = False)
+            CO2, Pressure, timeStamp = controls.sensors.getReadings(controls, logging = False)
             tempData.append([timeStamp - timeStart, CO2, Pressure])
             CO2Data.append(CO2)
             PressureData.append(Pressure)

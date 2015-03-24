@@ -14,7 +14,11 @@ class control:
     #code
     def __init__(self):
         
-        setFile = open("SamplerSettings.txt", 'r')
+        if sys.platform == "linux2":
+            setFile = open(r"SamplerSettings-RPi Copy.txt", 'r')
+        else:
+            setFile = open(r"SamplerSettings-Windows.txt", 'r')
+        
         allSettings = setFile.read()
         allSettings = allSettings.strip()
         allSettings = allSettings.split("\n")
@@ -33,12 +37,12 @@ class control:
                 
             setList.append(setting[1])
         
-        print "CO2 address is: %s" % setList[0]
-        print "PressureAddress: %s" % setList[1]
-        print "PumpAddress: %s" % setList[2]
-        print "testLength: %d" % int(setList[3])
-        print "secDivision: %d" % int(setList[4])
-        print "controlSelection: %s" % setList[5]
+        #print "CO2 address is: %s" % setList[0]
+        #print "PressureAddress: %s" % setList[1]
+        #print "PumpAddress: %s" % setList[2]
+        #print "testLength: %d" % int(setList[3])
+        #print "secDivision: %d" % int(setList[4])
+        #print "controlSelection: %s" % setList[5]
         
         
         self.CO2Address = setList[0]
@@ -47,16 +51,18 @@ class control:
         self.testLength = int(setList[3])
         self.secDivision = int(setList[4])
         self.controlSelection = setList[5]
-        print self.CO2Address
-        print "trying to make sensor List"
+        #print self.CO2Address
+        #print "trying to make sensor List"
         self.sensors = Sensors.sensorList(self.CO2Address, self.PressureAddress)
         self.sensors.CO2.triggerValue = float(setList[6])
         self.sensors.Pressure.triggerValue = int(setList[7])
+        self.pumpVoltage = int(setList[8])
         
-        self.myPump = Pumps.output_controller(self.PumpAddress)
+        
+        self.myPump = Pumps.output_controller(self.PumpAddress, self.pumpVoltage) #, voltage = self.pumpVoltage)
         self.logging = True            #save CO2, Pressure and other data to txt file?
-        self.collectionRun = False      #Run the sample collection pump when the gating algorithm returns True?
-        self.CO2DrawThrough = True      #Run the pump constantly to draw air through the CO2 sensor?
+        self.collectionRun = True      #Run the sample collection pump when the gating algorithm returns True?
+        self.CO2DrawThrough = False      #Run the pump constantly to draw air through the CO2 sensor?
         self.displayGraphLocal = False  #Plots the graph in a matplotlib animation locally
         self.displayGraphRemote = True  #Writes CO2, Pressure and other data to a socket that can be picked up by
                                             # Richard's web interface
@@ -72,7 +78,9 @@ class control:
 
     def Runner(self):
         
+        
         if self.displayGraphRemote == True:
+            print "connecting to socket"
             server_address = '/tmp/lucidity.socket'
 
             # Make sure the socket exists
@@ -92,38 +100,45 @@ class control:
         
         
         self.timeStart = time.time()
-        FileTime = time.time()
+        FileTime = self.timeStart
         timeS = [self.timeStart]
         self.collecting = 0
-        print "time start is: %s" % self.timeStart
+        #print "time start is: %s" % self.timeStart
         
         if sys.platform == "linux2":
             dataStore = r"/home/pi/datafiles/"
         else:
             dataStore = r"C:\Users\simon.kitchen\Documents\Software\Sandbox\Python\Test_rig\Sampling\datafiles\\"
+            # Look for datafiles directory one level above this file's location
+            #dataStore = os.path.join(os.path.dirname(__file__), "..", "datafiles")
         
         
         #Set up sampler settings and get breathing pattern:
+        print "Now collecting for trigger calculation"
         setupFileName = dataStore+str(int(FileTime))+" SetupConfig.txt"
         self.dataFile = open(setupFileName, 'w')
+        statusHolder = self.collectionRun       # ensure the pump doesn't run during this phase and collect the wrong sample
+        self.collectionRun = False
         self.localLoop(10)    #callibration time, 30sec should allow 5 breaths, a good average
         self.dataFile.close()
+        self.collectionRun = statusHolder       #turn pump back on to previous settings
         
         triggerCal = TriggerSetting.TriggerCalcs()
         TriggerVals = triggerCal.calculate(setupFileName)
         self.sensors.CO2.triggerValue = TriggerVals[0]
         self.sensors.Pressure.triggerValue = TriggerVals[1]
-        print TriggerVals[0]
-        print TriggerVals[1]
-        print "*******************************************"
-        raw_input()
+        
+        print "CO2 Trigger Val is: %f" % TriggerVals[0]
+        print "Pressure Trigger Val is: %f" % TriggerVals[1]
+        #print "*******************************************"
+        #raw_input()
         
         
         self.dataFile = open(dataStore+str(int(FileTime))+".txt", 'w')
         #self.dataFile = open(str(int(self.timeStart))+".txt", 'w')
         
         if self.CO2DrawThrough == True:
-            print "turning pump on"
+            #print "turning pump on"
             self.myPump.turnOnOff(1)
             time.sleep(1)
         

@@ -33,7 +33,6 @@ class TriggerCalcs:
         dataFile.close()
         #dataGroups = dataGroups.strip('')
         
-        
         indData = []
         firstPoint = True
         for DG in dataGroups:
@@ -53,11 +52,6 @@ class TriggerCalcs:
         
         return indData
     
-    
-    
-    
-    
-    
     def smooth(self, x, window_len=9,window='blackman'):   # 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
         #if x.ndim != 1:
         #    raise ValueError, "smooth only accepts 1 dimension arrays."
@@ -70,7 +64,6 @@ class TriggerCalcs:
     
         if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
             raise ValueError, "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
-    
         
         print "got here here here"
         s=numpy.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
@@ -81,11 +74,11 @@ class TriggerCalcs:
             w=eval('numpy.'+window+'(window_len)')
     
         y=numpy.convolve(w/w.sum(),s,mode='valid')
-        print "length of the returned obj: %d" % len(y)
+        #print "length of the returned obj: %d" % len(y)
         gate1 = (window_len-1)/2
         gate2 = -((window_len-1)/2)
-        print "gates are: %d, %d" % (gate1, gate2)
-        print "length of returned obj = %d" % len(y[gate1: gate2])
+        #print "gates are: %d, %d" % (gate1, gate2)
+        #print "length of returned obj = %d" % len(y[gate1: gate2])
         return y[gate1: gate2]
     
     def peakDetection(self, data, timeS):
@@ -137,15 +130,16 @@ class TriggerCalcs:
         return outputGroups, averages     #returns a list of 2 lists, each of which contains a list of [data, time], and average[peak, trough]
         
     def averageValueFiltered(self, data):
+        print "length of initialData is: %d" % len(data)
         mean = numpy.mean(data)
         stddev = numpy.std(data)
         print "mean is: %f" % mean
         print "std dev is: %f" % stddev
         finalData = []
         for d in data:
-            if d < mean + stddev and d > mean - stddev:
+            if d < mean + 2*stddev and d > mean - 2*stddev:
                 finalData.append(d)
-        
+        print "length of finalData is: %d" % len(finalData)
         return numpy.mean(finalData)
     
     

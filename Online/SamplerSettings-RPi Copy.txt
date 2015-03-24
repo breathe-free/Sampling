@@ -5,4 +5,6 @@ Total Test Time = 30
 Sensor Poll Rate = 5
 Collection Control Level = p
 CO2 Trigger Limit = 3.2
-Pressure trigger Limit = 1000
+Pressure trigger Limit = 2000
+Pump Voltage = 24
+Initialisation Time = 15

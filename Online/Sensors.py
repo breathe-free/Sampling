@@ -8,11 +8,11 @@ class sensorList:
         self.CO2 = CO2_sensor(CO2Ad)
         self.Pressure = Pressure_sensor(PressureAd)
         
-    def getReadings(self, controls):          # this should be moved into Sensors as a function within sensorList
+    def getReadings(self, controls):
         PVal = self.Pressure.getReading()
-        print "got pressure"
+        #print "got pressure"
         CVal = self.CO2.getReading()
-        print "got CO2"
+        #print "got CO2"
         timeStamp = time.time()
         if controls.controlSelection == "c" and CVal >= self.CO2.triggerValue:
             print "collecting"
@@ -26,14 +26,18 @@ class sensorList:
             controls.collecting = 0
         
         if controls.collectionRun == True:
-            print "now at pump"
-            controls.myPump.turnOnOff(controls.collecting)
+            #print "now at pump"
+            if controls.collecting >= 1:
+                
+                controls.myPump.turnOnOff(1)
+            else:
+                controls.myPump.turnOnOff(0)
         
         dataString = "%s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(controls.collecting))
         
         if controls.logging == True:
-            print "writing file"
-            print dataString
+            #print "writing file"
+            #print dataString
             controls.dataFile.write(dataString)
         if controls.displayGraphRemote == True:
             
@@ -42,22 +46,19 @@ class sensorList:
         
         return CVal, PVal, timeStamp
     
-    def setTriggerValues(self, controls):
-        saveLoggingStatus = controls.logging
-        controls.logging = False
-        raw_input("put mask on, take 2 breaths then press any key")
-        print "Starting respiration characterisation process\nBreathe normally for 15 seconds"
+    #def setTriggerValues(self, controls):
+    #    saveLoggingStatus = controls.logging
+    #    controls.logging = False
+    #    raw_input("put mask on, take 2 breaths then press any key")
+    #    print "Starting respiration characterisation process\nBreathe normally for 15 seconds"
         
-        
-        
-    
         timeStart = time.time()
         tempData = []
         CO2Data = []
         PressureData = []
         for i in range(15*controls.secDivision):
             print "looping for calibration: %d" % i
-            CO2, Pressure, timeStamp = sensorPoll.getReadings(controls, logging = False)
+            CO2, Pressure, timeStamp = self.getReadings(controls, logging = False)
             tempData.append([timeStamp - timeStart, CO2, Pressure])
             CO2Data.append(CO2)
             PressureData.append(Pressure)
