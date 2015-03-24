@@ -54,8 +54,8 @@ class control:
         #print self.CO2Address
         #print "trying to make sensor List"
         self.sensors = Sensors.sensorList(self.CO2Address, self.PressureAddress)
-        self.sensors.CO2.triggerValue = float(setList[6])
-        self.sensors.Pressure.triggerValue = int(setList[7])
+        self.sensors.CO2.triggerValues = float(setList[6])
+        self.sensors.Pressure.triggerValues = int(setList[7])
         self.pumpVoltage = int(setList[8])
         
         
@@ -125,13 +125,20 @@ class control:
         
         triggerCal = TriggerSetting.TriggerCalcs()
         TriggerVals = triggerCal.calculate(setupFileName)
-        self.sensors.CO2.triggerValue = TriggerVals[0]
-        self.sensors.Pressure.triggerValue = TriggerVals[1]
+        self.sensors.CO2.triggerValues = TriggerVals[0]
+        self.sensors.Pressure.triggerValues = TriggerVals[1]
+        print type(TriggerVals)
+        if isinstance(TriggerVals[0], list):
+            print "*******************************************"
+            for iii in range(2):
+                print iii
+                print "CO2 Trigger Val is: %f" % TriggerVals[iii][0]
+                print "Pressure Trigger Val is: %f" % TriggerVals[iii][1]
+        else:
+            print"##############################################"
+            print "CO2 Trigger Val is: %f" % TriggerVals[0]
+            print "Pressure Trigger Val is: %f" % TriggerVals[1]
         
-        print "CO2 Trigger Val is: %f" % TriggerVals[0]
-        print "Pressure Trigger Val is: %f" % TriggerVals[1]
-        #print "*******************************************"
-        #raw_input()
         
         
         self.dataFile = open(dataStore+str(int(FileTime))+".txt", 'w')

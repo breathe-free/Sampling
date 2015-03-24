@@ -14,16 +14,39 @@ class sensorList:
         CVal = self.CO2.getReading()
         #print "got CO2"
         timeStamp = time.time()
-        if controls.controlSelection == "c" and CVal >= self.CO2.triggerValue:
-            print "collecting"
-            controls.collecting = controls.sensors.CO2.triggerValue
-    
-        elif controls.controlSelection == "p" and PVal >= self.Pressure.triggerValue:
-            print "collecting"
-            controls.collecting = controls.sensors.Pressure.triggerValue
-    
+        
+        if isinstance(controls.sensors.CO2.triggerValues, list):
+            if controls.controlSelection == "c" and CVal >= controls.sensors.CO2.triggerValues[0] and controls.collecting==0:
+                print "collecting"
+                controls.collecting = controls.sensors.CO2.triggerValues[0]
+            
+            elif controls.controlSelection == "c" and CVal <= controls.sensors.CO2.triggerValues[1] and controls.collecting>=1:
+                print "stopped collecting"
+                controls.collecting = 0
+            
+            elif controls.controlSelection == "p" and PVal >= controls.sensors.Pressure.triggerValues[0] and controls.collecting==0:
+                print "collecting"
+                controls.collecting = controls.sensors.Pressure.triggerValues[0]
+            
+            elif controls.controlSelection == "p" and PVal <= controls.sensors.Pressure.triggerValues[1] and controls.collecting>=1:
+                print "stopped collecting"
+                controls.collecting = 0
+            else:
+                print "continue as is"
+                pass
+            
+        
         else:
-            controls.collecting = 0
+            if controls.controlSelection == "c" and CVal >= controls.sensors.CO2.triggerValues:
+                print "collecting"
+                controls.collecting = controls.sensors.CO2.triggerValues
+        
+            elif controls.controlSelection == "p" and PVal >= controls.sensors.Pressure.triggerValues:
+                print "collecting"
+                controls.collecting = controls.sensors.Pressure.triggerValues
+        
+            else:
+                controls.collecting = 0
         
         if controls.collectionRun == True:
             #print "now at pump"
@@ -46,48 +69,6 @@ class sensorList:
         
         return CVal, PVal, timeStamp
     
-    #def setTriggerValues(self, controls):
-    #    saveLoggingStatus = controls.logging
-    #    controls.logging = False
-    #    raw_input("put mask on, take 2 breaths then press any key")
-    #    print "Starting respiration characterisation process\nBreathe normally for 15 seconds"
-        
-        timeStart = time.time()
-        tempData = []
-        CO2Data = []
-        PressureData = []
-        for i in range(15*controls.secDivision):
-            print "looping for calibration: %d" % i
-            CO2, Pressure, timeStamp = self.getReadings(controls, logging = False)
-            tempData.append([timeStamp - timeStart, CO2, Pressure])
-            CO2Data.append(CO2)
-            PressureData.append(Pressure)
-            timeToWait = ((float(i+1)/float(controls.secDivision))-(time.time() - timeStart))
-            if timeToWait < 0:
-                timeToWait = 0
-            time.sleep(timeToWait)
-        
-        CO2Min = (min(CO2Data))
-        CO2Max = (max(CO2Data))
-        PressureMin = (min(PressureData))
-        PressureMax = (max(PressureData))
-        
-        print "CO2Min, CO2Max, PressureMin, PressureMax" 
-        print CO2Min
-        print CO2Max
-        print PressureMin
-        print PressureMax
-        
-        return CO2Min, CO2Max, PressureMin, PressureMax
-        
-        
-        
-    
-    
-    
-    
-    
-
 class CO2_sensor: #designed for things like CO2, flow or pressure etc   HOW TO MERGE THE SENSOR TYPES?????
     def __init__(self, connection, samplePeriod = 0.2):
         self.connection = connection
@@ -95,7 +76,6 @@ class CO2_sensor: #designed for things like CO2, flow or pressure etc   HOW TO M
         self.triggerValue = 3.2
 
         self.commLink = self.initialiseConnection()
-        
 
     def initialiseConnection(self):
         print r"%s" % self.connection
@@ -120,7 +100,6 @@ class CO2_sensor: #designed for things like CO2, flow or pressure etc   HOW TO M
         pp105 = float(readString[1]) # ppm/10! - not ppm
         CO2percent = pp105/1000
         return CO2percent
-
 
 class Pressure_sensor: #Should be rolled into CO2_sensor and just called input sensor
     def __init__(self, connection, samplePeriod = 0.2):

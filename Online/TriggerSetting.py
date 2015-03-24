@@ -147,9 +147,12 @@ class TriggerCalcs:
         
         interLimitRange = Limits[0]-Limits[1] #peak - trough
         
-        Trigger = Limits[1] + interLimitRange/2 #CUrrently at 50% of range... because it is an illustration
+        OnTrigger = Limits[1] + interLimitRange*0.7 #CUrrently at 50% of range... because it is an illustration
+        OffTrigger = Limits[1] + interLimitRange*0.4 
         
-        return Trigger
+        Triggers = [OnTrigger, OffTrigger]
+        
+        return Triggers
         
 
     def calculate(self, fileName):
