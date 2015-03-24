@@ -4,7 +4,6 @@ import os
 import re
 import numpy
 
-
 class dP:   #data point
         def __init__(self, tS, P, C, Coll): #time, pressure, CO2, collecting
             self.tS = tS
@@ -153,7 +152,6 @@ class TriggerCalcs:
         Triggers = [OnTrigger, OffTrigger]
         
         return Triggers
-        
 
     def calculate(self, fileName):
         data = self.getDataFromFile(fileName)
