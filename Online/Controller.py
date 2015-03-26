@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 
+"""
+This Module runs the main loop for sample collection. It can communicate with a unix socket to interface with remote computers
+and also creates a control object to pass settings about sensors and other aspects of the sample collection process.
+
+Authored by Simon Kitchen 15/03/2015
+
+"""
+
 import Sensors
 import Pumps
 import RTPlotting as RTP
@@ -74,30 +82,16 @@ class control:
         
         if self.testLength == 'ui':
             self.testLength = int(raw_input("enter number of seconds to collect data: "))
-        
+    
+    def close(self):
+        self.sensors.CO2.commLink.close()
+        self.sensors.Pressure.commLink.close()
+        self.myPump.commLink.close()
+    
 
     def Runner(self, remoteComms):
         
         self.sock = remoteComms.sock
-        #if self.displayGraphRemote == True: #to delete
-        #    print "connecting to socket"
-        #    server_address = '/tmp/lucidity.socket'
-        #
-        #    # Make sure the socket exists
-        #    if not os.path.exists(server_address):
-        #        raise Exception("No socket at %s" % server_address)
-        #    
-        #    # Create a UDS socket
-        #    self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        #    
-        #    # Try and connect to socket.  Output any error and fall over.
-        #    try:
-        #        self.sock.connect(server_address)
-        #    except socket.error, msg:
-        #        print >>sys.stderr, msg
-        #        sys.exit(1)r
-        
-        
         
         self.timeStart = time.time()
         FileTime = self.timeStart
@@ -119,7 +113,7 @@ class control:
         self.dataFile = open(setupFileName, 'w')
         statusHolder = self.collectionRun       # ensure the pump doesn't run during this phase and collect the wrong sample
         self.collectionRun = False
-        self.localLoop(10)    #callibration time, 30sec should allow 5 breaths, a good average
+        self.localLoop(10, remoteComms)    #callibration time, 30sec should allow 5 breaths, a good average
         self.dataFile.close()
         self.collectionRun = statusHolder       #turn pump back on to previous settings
         
@@ -155,21 +149,22 @@ class control:
             self.Grapher = RTP.graphing()
             self.Grapher.runGraphingLoop(self)
         elif self.displayGraphLocal == False:
-            self.localLoop(self.testLength)
+            self.localLoop(self.testLength, remoteComms)
             
         print "finished collecting"
         self.myPump.turnOnOff(0)
         self.dataFile.close()
-        if self.displayGraphRemote == True:
-            self.sock.close()
         print "done!!!"
         
-    def localLoop(self, testLength):
+    def localLoop(self, testLength, remoteComms):
         self.timeStart = time.time()
         counter = 0
         while time.time()-self.timeStart <= testLength:
             CO2, Pressure, timeStamp = self.sensors.getReadings(self)
             counter = counter + 1
+            commands = remoteComms.receive()
+            if commands.find("stopsampling") >= 0:
+                break
             TS = float(counter)/self.secDivision - (time.time()-self.timeStart)
             if TS < 0:
                 TS = 0
@@ -211,14 +206,21 @@ def mainProgram(remoteControl = True):
     myComms = Communications()
     
     while True:
-    
-        while remoteControl == True:
-            #myComms loop until got a start command
-            commString = myComms.receive()
-            if commString.find("startsampling"):
-                break
-            time.sleep(1)
-    
+        
+        try:
+            print "waiting for response from web interface"
+            while remoteControl == True:
+                
+                #myComms loop until got a start command
+                commString = myComms.receive()
+                if commString.find("startsampling") >= 0:
+                    print "found something"
+                    break
+                time.sleep(1)
+        except KeyboardInterrupt:
+            myControl.close()
+            myComms.sock.close()
+            
     
         myControl.Runner(myComms)
         noInput = True
@@ -227,6 +229,7 @@ def mainProgram(remoteControl = True):
             if userInput == 'r':
                 noInput = False
             elif userInput == 'q':
+                myControl.close()
                 myComms.sock.close()
                 sys.exit()
             else:
@@ -234,6 +237,8 @@ def mainProgram(remoteControl = True):
     
 
 if __name__ == '__main__':
-    remoteControl = False
+    
+    remoteControl = True
     mainProgram(remoteControl)
+    
     
