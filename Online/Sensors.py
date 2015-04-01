@@ -7,12 +7,15 @@ class sensorList:
     def __init__(self, CO2Ad, PressureAd):
         self.CO2 = CO2_sensor(CO2Ad)
         self.Pressure = Pressure_sensor(PressureAd)
+        self.Flow = Flow_sensor(self.Pressure.commLink)
         
     def getReadings(self, controls):
         PVal = self.Pressure.getReading()
         #print "got pressure"
         CVal = self.CO2.getReading()
         #print "got CO2"
+        FVal = slef.Flow.getReading()
+        print "got Flow: %f" % FVal
         timeStamp = time.time()
         if controls.controlSelection == "c" and CVal >= self.CO2.triggerValue:
             print "collecting"
@@ -33,7 +36,7 @@ class sensorList:
             else:
                 controls.myPump.turnOnOff(0)
         
-        dataString = "%s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(controls.collecting))
+        dataString = "%s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(FVal), str(controls.collecting))
         
         if controls.logging == True:
             #print "writing file"
@@ -44,7 +47,7 @@ class sensorList:
             controls.sock.sendall(dataString)
            
         
-        return CVal, PVal, timeStamp
+        return CVal, PVal, FVal, timeStamp
     
     #def setTriggerValues(self, controls):
     #    saveLoggingStatus = controls.logging
@@ -122,6 +125,31 @@ class CO2_sensor: #designed for things like CO2, flow or pressure etc   HOW TO M
         return CO2percent
 
 
+class Flow_sensor: #Should be rolled into CO2_sensor and just called input sensor
+    def __init__(self, commLink, samplePeriod = 0.2):       # Feed in the commlink from Pressure sensor - uses the same board
+       
+        self.samplePeriod = samplePeriod
+
+        self.commLink = commLink
+        print "trying outside of IC:"
+        self.commLink.write('F')
+        check = self.commLink.readline()
+        print check
+        if check == -1:
+            print "no MFC detected - cannot get value"
+            self.Available = False
+        else:
+            self.Available = True
+
+    def getReading(self):
+        if self.Available == False:
+            return -1
+        self.commLink.write('F')
+        #print "written r to Arduino"
+        Flow = float(self.commLink.readline() )
+        #print "got pressure"
+        return Flow
+
 class Pressure_sensor: #Should be rolled into CO2_sensor and just called input sensor
     def __init__(self, connection, samplePeriod = 0.2):
         self.connection = connection
@@ -130,19 +158,19 @@ class Pressure_sensor: #Should be rolled into CO2_sensor and just called input s
 
         self.commLink = self.initialiseConnection()
         print "trying outside of IC:"
-        self.commLink.write('r')
+        self.commLink.write('P')
         print self.commLink.readline()
 
     def initialiseConnection(self):
         conn = Serial(self.connection, 9600, timeout = 3)
         time.sleep(1)
-        conn.write('r')
+        conn.write('P')
         print conn.readline()
         print"initialised Pressure"
         return conn
 
     def getReading(self):
-        self.commLink.write('r')
+        self.commLink.write('P')
         #print "written r to Arduino"
         pressure = float(self.commLink.readline() )
         #print "got pressure"

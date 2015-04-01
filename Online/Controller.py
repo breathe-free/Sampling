@@ -153,7 +153,7 @@ class control:
         self.timeStart = time.time()
         counter = 0
         while time.time()-self.timeStart <= testLength:
-            CO2, Pressure, timeStamp = self.sensors.getReadings(self)
+            CO2, Pressure, Flow, timeStamp = self.sensors.getReadings(self)
             counter = counter + 1
             commands = remoteComms.receive()
             if commands.find("stopsampling") >= 0:
