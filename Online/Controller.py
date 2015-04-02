@@ -152,7 +152,9 @@ class control:
     def localLoop(self, testLength, remoteComms):
         self.timeStart = time.time()
         counter = 0
-        while time.time()-self.timeStart <= testLength:
+        self.collectionLimitReached = False
+        
+        while time.time()-self.timeStart <= testLength and not self.collectionLimitReached:
             CO2, Pressure, Flow, timeStamp = self.sensors.getReadings(self)
             counter = counter + 1
             commands = remoteComms.receive()
