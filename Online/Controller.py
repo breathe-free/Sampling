@@ -62,8 +62,8 @@ class control:
         #print self.CO2Address
         #print "trying to make sensor List"
         self.sensors = Sensors.sensorList(self.CO2Address, self.PressureAddress)
-        self.sensors.CO2.triggerValues = float(setList[6])
-        self.sensors.Pressure.triggerValues = int(setList[7])
+        self.sensors.CO2.triggerValues = [float(setList[6]), float(setList[6])]
+        self.sensors.Pressure.triggerValues = [int(setList[7]), int(setList[7])]
         self.pumpVoltage = int(setList[8])
         
         
@@ -74,6 +74,7 @@ class control:
         self.displayGraphLocal = False  #Plots the graph in a matplotlib animation locally
         self.displayGraphRemote = True  #Writes CO2, Pressure and other data to a socket that can be picked up by
                                             # Richard's web interface
+        
         
         
         
