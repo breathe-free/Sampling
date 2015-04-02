@@ -17,8 +17,11 @@ import socket
 import os
 import TriggerSetting
 
+import json
+import csv
 
-class control:
+
+class Control:
     #code
     def __init__(self):
         
@@ -172,7 +175,7 @@ class control:
             time.sleep(TS)
     
 class Communications:
-    def __init__(self):
+    def __init__(self, controls):
         print "connecting to socket"
         server_address = '/tmp/lucidity.socket'
 
@@ -190,21 +193,114 @@ class Communications:
         except socket.error, msg:
             print >>sys.stderr, msg
             sys.exit(1)
+        
+        self.STATES = enum(
+            INITIALISING = "initialising",
+            WAITING      = "waiting",
+            CALIBRATING  = "calibrating",
+            ANALYSING    = "analysing",
+            COLLECTING   = "collecting",
+        )
+        self.ACTIVE_STATES = [ self.STATES.CALIBRATING, self.STATES.ANALYSING, self.STATES.COLLECTING ]
+        
+        self.support = Support_Functions()
+    
     def receive(self):
-        # Return either an empty string (if nothing received)
-        # or the contents of any incoming message
-        try:
-            return self.sock.recv(1024)
-        except socket.error:
-            return ""
+        
+        rbuffer = ''
+        while True:
+            try:
+                incoming = self.sock.recv(1024)
+                rbuffer += incoming
+            except socket.error:
+                # nothing to read
+                yield None
+                continue
+    
+            while rbuffer.find("\n") != -1:
+                line, rbuffer = rbuffer.split("\n", 1)
+                try:
+                    yield json.loads(line)
+                except ValueError, e:
+                    print >>sys.stderr, str(e)
+                    print >>sys.stderr, line
+    
+    def change_state(self, new_state, message=None, severity=None):
+        if self.state != new_state:
+            message = "State changed to %s." % new_state
+            severity = "info"
+        self.state = new_state
+        self.emit_state(message=message, severity="info")
+    
+    def emit_state(self, **kwargs):
+        h = {"state": self.state}
+        for key,val in kwargs.iteritems():
+            h[key] = val
+        self.send(json.dumps(h) + "\n") 
+    
+    def send(self, message):
+        self.sock.sendall(message)
+        
+    def enum(**enums):
+        return type('Enum', (), enums)
+    
+    def checkCommands(self):        #sort of equivalent to run in Richard's main function
+        
+        # read from sock
+        received = receive().next()
+        if received is not None and 'command' in received:
+            # act on information received
+            print "Received: %s" % received
+            
+            do_what = received['command']
+            if do_what == "stop":
+                self.change_state(self.STATES.WAITING)
+            
+            elif do_what == "start":
+                self.emit_state(message="Using settings: " + json.dumps(received['settings']), severity="info")
+                self.change_state(self.STATES.CALIBRATING)
+
+            elif do_what == "request_state":
+                self.emit_state()
+            
+            elif do_what == "request_settings_current":
+                self.emit_state(settings=self.settings)
+            
+            elif do_what == "apply_settings_default":
+                self.settings = self.support.loadSettings("default")
+                self.emit_state(settings=self.settings, message="Loaded default settings.", severity="info")
+            
+            elif do_what == "apply_settings_user":
+                self.settings = self.support.loadSettings("user")
+                self.emit_state(settings=self.settings, message="Loaded user settings.", severity="info")
+            
+            elif do_what == "save_settings":
+                self.user_settings = received['settings']
+                self.support.saveSettings(self.user_settings)
+                self.emit_state(settings=self.settings, message="Saved user settings.", severity="info")
+
+class Support_Functions:
+    def __init__(self):
+        pass
+    def saveSettings(self, settings):
+        pass    #save to user settings file (overwrite)
+    
+    def loadSettings(self, source):
+        if source == "user":
+            pass
+        elif source == "default":
+            pass
+        else:
+            pass
+    return settings
     
     
-
-
+    
+    
 
 def mainProgram(remoteControl = True):
-    myControl = control()
-    myComms = Communications()
+    myControl = Control()
+    myComms = Communications(myControl)
     
     while True:
         
@@ -219,7 +315,7 @@ def mainProgram(remoteControl = True):
                     break
                 time.sleep(1)
         except KeyboardInterrupt:
-            print "Keyboard used to interrupt - do I close something here?"
+            print "Keyboard used to interrupt - do I need to close something here?"
             pass
             #myControl.close()
             #myComms.sock.close()
