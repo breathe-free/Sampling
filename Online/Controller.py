@@ -211,8 +211,10 @@ def mainProgram(remoteControl = True):
                     break
                 time.sleep(1)
         except KeyboardInterrupt:
-            myControl.close()
-            myComms.sock.close()
+            print "Keyboard used to interrupt - do I close something here?"
+            pass
+            #myControl.close()
+            #myComms.sock.close()
             
     
         myControl.Runner(myComms)
