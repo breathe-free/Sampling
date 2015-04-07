@@ -16,32 +16,32 @@ class sensorList:
         timeStamp = time.time()
         
         if isinstance(controls.sensors.CO2.triggerValues, list):
-            if controls.controlSelection == "c" and CVal >= controls.sensors.CO2.triggerValues[0] and controls.collecting==0:
+            if controls.settings["collection_control"] == "c" and CVal >= controls.sensors.CO2.triggerValues[0] and controls.collecting==0:
                 print "collecting"
                 controls.collecting = controls.sensors.CO2.triggerValues[0]
             
-            elif controls.controlSelection == "c" and CVal <= controls.sensors.CO2.triggerValues[1] and controls.collecting>=1:
+            elif controls.settings["collection_control"] == "c" and CVal <= controls.sensors.CO2.triggerValues[1] and controls.collecting>=1:
                 print "stopped collecting"
                 controls.collecting = 0
             
-            elif controls.controlSelection == "p" and PVal >= controls.sensors.Pressure.triggerValues[0] and controls.collecting==0:
+            elif controls.settings["collection_control"] == "p" and PVal >= controls.sensors.Pressure.triggerValues[0] and controls.collecting==0:
                 print "collecting"
                 controls.collecting = controls.sensors.Pressure.triggerValues[0]
             
-            elif controls.controlSelection == "p" and PVal <= controls.sensors.Pressure.triggerValues[1] and controls.collecting>=1:
+            elif controls.settings["collection_control"] == "p" and PVal <= controls.sensors.Pressure.triggerValues[1] and controls.collecting>=1:
                 print "stopped collecting"
                 controls.collecting = 0
             else:
-                print "continue as is"
+                #print "continue as is"
                 pass
             
         
         else:
-            if controls.controlSelection == "c" and CVal >= controls.sensors.CO2.triggerValues:
+            if controls.settings["collection_control"] == "c" and CVal >= controls.sensors.CO2.triggerValues:
                 print "collecting"
                 controls.collecting = controls.sensors.CO2.triggerValues
         
-            elif controls.controlSelection == "p" and PVal >= controls.sensors.Pressure.triggerValues:
+            elif controls.settings["collection_control"] == "p" and PVal >= controls.sensors.Pressure.triggerValues:
                 print "collecting"
                 controls.collecting = controls.sensors.Pressure.triggerValues
         

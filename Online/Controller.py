@@ -18,13 +18,13 @@ import os
 import TriggerSetting
 
 import json
-import csv
+#import csv     # Nice idea, not currently executed
 
 DEFAULT_SETTINGS = {
     "calibration_time":         10,
     "sample_collection_time":   30,
     "collection_control":       "p",
-    "default_trigger_co2":      1.9,
+    "default_trigger_co2":      2.5,
     "default_trigger_pressure": 1000,
     "auto_triggers":            True,
     "collection_rate":          500,
@@ -65,7 +65,6 @@ class Control:
         #print "secDivision: %d" % int(setList[4])
         #print "controlSelection: %s" % setList[5]
         
-        
         self.CO2Address = setList[0]
         self.PressureAddress = setList[1]
         self.PumpAddress = setList[2]
@@ -97,22 +96,19 @@ class Control:
             "calibration_time":         10,
             "sample_collection_time":   self.testLength,
             "collection_control":       "p",
-            "default_trigger_co2":      1.99,
+            "default_trigger_co2":      2,
             "default_trigger_pressure": 1000,
             "auto_triggers":            True,
             "collection_rate":          500,
             "collection_limit":         50,
         }
-        
     
     def close(self):
         self.sensors.CO2.commLink.close()
         self.sensors.Pressure.commLink.close()
         self.myPump.commLink.close()
     
-
     def Runner(self, remoteComms):
-        
         self.sock = remoteComms.sock
         
         self.timeStart = time.time()
@@ -128,16 +124,19 @@ class Control:
             # Look for datafiles directory one level above this file's location
             #dataStore = os.path.join(os.path.dirname(__file__), "..", "datafiles")
         
+        setupFileName = dataStore+str(int(FileTime))+"AllData.txt"
+        self.dataFile = open(setupFileName, 'w')
+        json.dump(self.settings, self.dataFile)
+        self.dataFile.write("\n Calibrating Data Starts Here \n")
         
         #Set up sampler settings and get breathing pattern:
         print "Now collecting for trigger calculation"
-        setupFileName = dataStore+str(int(FileTime))+" SetupConfig.txt"
-        self.dataFile = open(setupFileName, 'w')
+        
         statusHolder = self.collectionRun       # ensure the pump doesn't run during this phase and collect the wrong sample
         self.collectionRun = False
         remoteComms.change_state(remoteComms.STATES.CALIBRATING)
-        self.localLoop(10, remoteComms)    #callibration time, 30sec should allow 5 breaths, a good average
-        self.dataFile.close()
+        self.localLoop(self.settings["calibration_time"], remoteComms)    #callibration time, 30sec should allow 5 breaths, a good average
+        
         self.collectionRun = statusHolder       #turn pump back on to previous settings
         remoteComms.change_state(remoteComms.STATES.ANALYSING)
         triggerCal = TriggerSetting.TriggerCalcs()
@@ -145,20 +144,21 @@ class Control:
         self.sensors.CO2.triggerValues = TriggerVals[0]
         self.sensors.Pressure.triggerValues = TriggerVals[1]
         print type(TriggerVals)
+        self.dataFile.write("\n Trigger values for this collection run are: \n")
         if isinstance(TriggerVals[0], list):
             print "*******************************************"
             for iii in range(2):
                 print iii
                 print "CO2 Trigger Val is: %f" % TriggerVals[iii][0]
                 print "Pressure Trigger Val is: %f" % TriggerVals[iii][1]
+                
         else:
             print"##############################################"
             print "CO2 Trigger Val is: %f" % TriggerVals[0]
             print "Pressure Trigger Val is: %f" % TriggerVals[1]
         
+        json.dump(TriggerVals, self.dataFile)
         
-        
-        self.dataFile = open(dataStore+str(int(FileTime))+".txt", 'w')
         #self.dataFile = open(str(int(self.timeStart))+".txt", 'w')
         
         if self.CO2DrawThrough == True:
@@ -167,12 +167,13 @@ class Control:
             time.sleep(1)
         
         print "measurement loop"
+        self.dataFile.write("\n Collection Data Starts Here \n")
         remoteComms.change_state(remoteComms.STATES.COLLECTING)
         if self.displayGraphLocal == True:
             self.Grapher = RTP.graphing()
             self.Grapher.runGraphingLoop(self)
         elif self.displayGraphLocal == False:
-            self.localLoop(self.testLength, remoteComms)
+            self.localLoop(self.settings["sample_collection_time"], remoteComms)
             
         print "finished collecting"
         self.myPump.turnOnOff(0)
@@ -271,7 +272,6 @@ class Communications:
         return type('Enum', (), enums)
     
     def checkCommands(self, controls):        #sort of equivalent to run in Richard's main function
-        
         # read from sock
         received = self.receive().next()
         if received is not None and 'command' in received:
@@ -339,8 +339,7 @@ def mainProgram(remoteControl = True):
                 
                 #myComms loop until got a start command
                 commString = myComms.checkCommands(myControl)
-                print type (commString)
-                print commString
+
                 if commString is not None and commString.find("startsampling") >= 0:
                     print "found something"
                     break
@@ -351,7 +350,6 @@ def mainProgram(remoteControl = True):
             myControl.close()
             myComms.sock.close()
             sys.exit()
-            
     
         myControl.Runner(myComms)
         if myControl.displayGraphRemote == False:
