@@ -117,10 +117,11 @@ class Control:
         self.dataFile = open(setupFileName, 'w')
         statusHolder = self.collectionRun       # ensure the pump doesn't run during this phase and collect the wrong sample
         self.collectionRun = False
+        myComms.change_state(myComms.STATES.CALIBRATING)
         self.localLoop(10, remoteComms)    #callibration time, 30sec should allow 5 breaths, a good average
         self.dataFile.close()
         self.collectionRun = statusHolder       #turn pump back on to previous settings
-        
+        myComms.change_state(myComms.STATES.ANALYSING)
         triggerCal = TriggerSetting.TriggerCalcs()
         TriggerVals = triggerCal.calculate(setupFileName)
         self.sensors.CO2.triggerValues = TriggerVals[0]
@@ -148,7 +149,7 @@ class Control:
             time.sleep(1)
         
         print "measurement loop"
-        
+        myComms.change_state(myComms.STATES.COLLECTING)
         if self.displayGraphLocal == True:
             self.Grapher = RTP.graphing()
             self.Grapher.runGraphingLoop(self)
@@ -158,6 +159,7 @@ class Control:
         print "finished collecting"
         self.myPump.turnOnOff(0)
         self.dataFile.close()
+        myComms.change_state(myComms.STATES.WAITING)
         print "done!!!"
         
     def localLoop(self, testLength, remoteComms):
@@ -204,6 +206,8 @@ class Communications:
         self.ACTIVE_STATES = [ self.STATES.CALIBRATING, self.STATES.ANALYSING, self.STATES.COLLECTING ]
         
         self.support = Support_Functions()
+        
+        self.change_state(STATES.INITIALISING)
     
     def receive(self):
         
@@ -309,6 +313,7 @@ def mainProgram(remoteControl = True):
         
         try:
             print "waiting for response from web interface"
+            myComms.change_state(myComms.STATES.WAITING)
             while remoteControl == True:
                 
                 #myComms loop until got a start command
@@ -321,9 +326,10 @@ def mainProgram(remoteControl = True):
                 time.sleep(1)
         except KeyboardInterrupt:
             print "Keyboard used to interrupt - do I need to close something here?"
-            pass
-            #myControl.close()
-            #myComms.sock.close()
+            
+            myControl.close()
+            myComms.sock.close()
+            sys.exit()
             
     
         myControl.Runner(myComms)
