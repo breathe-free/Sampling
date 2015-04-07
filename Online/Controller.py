@@ -117,11 +117,11 @@ class Control:
         self.dataFile = open(setupFileName, 'w')
         statusHolder = self.collectionRun       # ensure the pump doesn't run during this phase and collect the wrong sample
         self.collectionRun = False
-        myComms.change_state(myComms.STATES.CALIBRATING)
+        remoteComms.change_state(remoteComms.STATES.CALIBRATING)
         self.localLoop(10, remoteComms)    #callibration time, 30sec should allow 5 breaths, a good average
         self.dataFile.close()
         self.collectionRun = statusHolder       #turn pump back on to previous settings
-        myComms.change_state(myComms.STATES.ANALYSING)
+        remoteComms.change_state(remoteComms.STATES.ANALYSING)
         triggerCal = TriggerSetting.TriggerCalcs()
         TriggerVals = triggerCal.calculate(setupFileName)
         self.sensors.CO2.triggerValues = TriggerVals[0]
@@ -149,7 +149,7 @@ class Control:
             time.sleep(1)
         
         print "measurement loop"
-        myComms.change_state(myComms.STATES.COLLECTING)
+        remoteComms.change_state(remoteComms.STATES.COLLECTING)
         if self.displayGraphLocal == True:
             self.Grapher = RTP.graphing()
             self.Grapher.runGraphingLoop(self)
@@ -159,7 +159,7 @@ class Control:
         print "finished collecting"
         self.myPump.turnOnOff(0)
         self.dataFile.close()
-        myComms.change_state(myComms.STATES.WAITING)
+        remoteComms.change_state(remoteComms.STATES.WAITING)
         print "done!!!"
         
     def localLoop(self, testLength, remoteComms):
@@ -207,7 +207,7 @@ class Communications:
         
         self.support = Support_Functions()
         
-        self.change_state(STATES.INITIALISING)
+        self.change_state(self.STATES.INITIALISING)
     
     def receive(self):
         
