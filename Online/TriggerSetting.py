@@ -25,6 +25,8 @@ class TriggerCalcs:
         dataFile = open(fileName)
         allData = dataFile.read()
         
+        allData = allData.split(""
+        
         #print allData
         allData.strip('\n')
         allData.strip('')

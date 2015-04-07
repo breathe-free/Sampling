@@ -124,10 +124,10 @@ class Control:
             # Look for datafiles directory one level above this file's location
             #dataStore = os.path.join(os.path.dirname(__file__), "..", "datafiles")
         
-        setupFileName = dataStore+str(int(FileTime))+"AllData.txt"
+        setupFileName = dataStore+str(int(FileTime))+"CalibrationData.txt"
         self.dataFile = open(setupFileName, 'w')
-        json.dump(self.settings, self.dataFile)
-        self.dataFile.write("\n Calibrating Data Starts Here \n")
+        #json.dump(self.settings, self.dataFile)
+        #self.dataFile.write("\n Calibrating Data Starts Here \n")
         
         #Set up sampler settings and get breathing pattern:
         print "Now collecting for trigger calculation"
@@ -136,7 +136,7 @@ class Control:
         self.collectionRun = False
         remoteComms.change_state(remoteComms.STATES.CALIBRATING)
         self.localLoop(self.settings["calibration_time"], remoteComms)    #callibration time, 30sec should allow 5 breaths, a good average
-        
+        self.dataFile.close()
         self.collectionRun = statusHolder       #turn pump back on to previous settings
         remoteComms.change_state(remoteComms.STATES.ANALYSING)
         triggerCal = TriggerSetting.TriggerCalcs()
@@ -144,7 +144,7 @@ class Control:
         self.sensors.CO2.triggerValues = TriggerVals[0]
         self.sensors.Pressure.triggerValues = TriggerVals[1]
         print type(TriggerVals)
-        self.dataFile.write("\n Trigger values for this collection run are: \n")
+        #self.dataFile.write("\n Trigger values for this collection run are: \n")
         if isinstance(TriggerVals[0], list):
             print "*******************************************"
             for iii in range(2):
@@ -157,10 +157,16 @@ class Control:
             print "CO2 Trigger Val is: %f" % TriggerVals[0]
             print "Pressure Trigger Val is: %f" % TriggerVals[1]
         
-        json.dump(TriggerVals, self.dataFile)
         
-        #self.dataFile = open(str(int(self.timeStart))+".txt", 'w')
+        settingFileName = dataStore+str(int(FileTime))+"SettingData.txt"
+        self.settingFile = open(settingFileName, 'w')
+        json.dump(self.settings, self.settingFile)
+        json.dump(TriggerVals, self.settingFile)
+        self.settingFile.close()
         
+        
+        setupFileName = dataStore+str(int(FileTime))+".txt"
+        self.dataFile = open(setupFileName, 'w')
         if self.CO2DrawThrough == True:
             #print "turning pump on"
             self.myPump.turnOnOff(1)
