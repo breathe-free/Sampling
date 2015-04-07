@@ -20,6 +20,16 @@ import TriggerSetting
 import json
 import csv
 
+DEFAULT_SETTINGS = {
+    "calibration_time":         10,
+    "sample_collection_time":   30,
+    "collection_control":       "p",
+    "default_trigger_co2":      1.9,
+    "default_trigger_pressure": 1000,
+    "auto_triggers":            True,
+    "collection_rate":          500,
+    "collection_limit":         50,
+}
 
 class Control:
     #code
@@ -69,7 +79,6 @@ class Control:
         self.sensors.Pressure.triggerValues = [int(setList[7]), int(setList[7])]
         self.pumpVoltage = int(setList[8])
         
-        
         self.myPump = Pumps.output_controller(self.PumpAddress, self.pumpVoltage) #, voltage = self.pumpVoltage)
         self.logging = True            #save CO2, Pressure and other data to txt file?
         self.collectionRun = True      #Run the sample collection pump when the gating algorithm returns True?
@@ -78,14 +87,23 @@ class Control:
         self.displayGraphRemote = True  #Writes CO2, Pressure and other data to a socket that can be picked up by
                                             # Richard's web interface
         
-        
-        
-        
         if self.controlSelection == 'ui':
             self.controlSelection = raw_input("type c, p or f depending on which sensor you want to control with: ")
         
         if self.testLength == 'ui':
             self.testLength = int(raw_input("enter number of seconds to collect data: "))
+        
+        self.user_settings = {
+            "calibration_time":         10,
+            "sample_collection_time":   self.testLength,
+            "collection_control":       "p",
+            "default_trigger_co2":      1.99,
+            "default_trigger_pressure": 1000,
+            "auto_triggers":            True,
+            "collection_rate":          500,
+            "collection_limit":         50,
+        }
+        
     
     def close(self):
         self.sensors.CO2.commLink.close()
@@ -168,7 +186,7 @@ class Control:
         while time.time()-self.timeStart <= testLength:
             CO2, Pressure, timeStamp = self.sensors.getReadings(self)
             counter = counter + 1
-            commands = remoteComms.checkCommands()
+            commands = remoteComms.checkCommands(self)
             if commands is not None and commands.find("stopsampling") >= 0:
                 break
             TS = float(counter)/self.secDivision - (time.time()-self.timeStart)
@@ -188,6 +206,7 @@ class Communications:
         # Create a UDS socket
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock.setblocking(0)   # important - don't block on reads
+        
         
         # Try and connect to socket.  Output any error and fall over.
         try:
@@ -211,7 +230,9 @@ class Communications:
         self.change_state(self.STATES.INITIALISING)
     
     def receive(self):
-        
+        # Act as an iterator.  Sometimes >1 message will have accumulated on the
+        # socket by the time we come to read it.
+        # Yield either None (if nothing received, buffer empty) or json decode line by line.
         rbuffer = ''
         while True:
             try:
@@ -249,7 +270,7 @@ class Communications:
     def enum(self, **enums):
         return type('Enum', (), enums)
     
-    def checkCommands(self):        #sort of equivalent to run in Richard's main function
+    def checkCommands(self, controls):        #sort of equivalent to run in Richard's main function
         
         # read from sock
         received = self.receive().next()
@@ -271,20 +292,20 @@ class Communications:
                 self.emit_state()
             
             elif do_what == "request_settings_current":
-                self.emit_state(settings=self.settings)
+                self.emit_state(settings=controls.settings)
             
             elif do_what == "apply_settings_default":
-                self.settings = self.support.loadSettings("default")
-                self.emit_state(settings=self.settings, message="Loaded default settings.", severity="info")
+                controls.settings = self.support.loadSettings("default")
+                self.emit_state(settings=controls.settings, message="Loaded default settings.", severity="info")
             
             elif do_what == "apply_settings_user":
-                self.settings = self.support.loadSettings("user")
-                self.emit_state(settings=self.settings, message="Loaded user settings.", severity="info")
+                controls.settings = self.support.loadSettings("user")
+                self.emit_state(settings=controls.settings, message="Loaded user settings.", severity="info")
             
             elif do_what == "save_settings":
-                self.user_settings = received['settings']
-                self.support.saveSettings(self.user_settings)
-                self.emit_state(settings=self.settings, message="Saved user settings.", severity="info")
+                controls.user_settings = received['settings']
+                self.support.saveSettings(controls.user_settings)
+                self.emit_state(settings=controls.settings, message="Saved user settings.", severity="info")
 
 class Support_Functions:
     def __init__(self):
@@ -295,9 +316,11 @@ class Support_Functions:
     
     def loadSettings(self, source):
         if source == "user":
-            pass
+            with open("UserDefinedSettings.txt", "r") as infile:
+                return json.load(infile)            #load from user settings file (overwrite)
+
         elif source == "default":
-            pass
+            return DEFAULT_SETTINGS
         else:
             pass
         return settings
@@ -318,7 +341,7 @@ def mainProgram(remoteControl = True):
             while remoteControl == True:
                 
                 #myComms loop until got a start command
-                commString = myComms.checkCommands()
+                commString = myComms.checkCommands(myControl)
                 print type (commString)
                 print commString
                 if commString is not None and commString.find("startsampling") >= 0:
