@@ -93,7 +93,7 @@ class Control:
         if self.testLength == 'ui':
             self.testLength = int(raw_input("enter number of seconds to collect data: "))
         
-        self.user_settings = {
+        self.settings = {
             "calibration_time":         10,
             "sample_collection_time":   self.testLength,
             "collection_control":       "p",
@@ -303,8 +303,8 @@ class Communications:
                 self.emit_state(settings=controls.settings, message="Loaded user settings.", severity="info")
             
             elif do_what == "save_settings":
-                controls.user_settings = received['settings']
-                self.support.saveSettings(controls.user_settings)
+                settings = received['settings']
+                self.support.saveSettings(settings)
                 self.emit_state(settings=controls.settings, message="Saved user settings.", severity="info")
 
 class Support_Functions:
