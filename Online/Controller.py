@@ -326,9 +326,6 @@ class Support_Functions:
         return settings
     
     
-    
-    
-
 def mainProgram(remoteControl = True):
     myControl = Control()
     myComms = Communications(myControl)
@@ -357,17 +354,18 @@ def mainProgram(remoteControl = True):
             
     
         myControl.Runner(myComms)
-        noInput = True
-        while noInput == True:
-            userInput = raw_input("Collection cycle complete, type r to repeat, or q to quit: ")
-            if userInput == 'r':
-                noInput = False
-            elif userInput == 'q':
-                myControl.close()
-                myComms.sock.close()
-                sys.exit()
-            else:
-                print "invalid arguement, please enter r or q"
+        if myControl.displayGraphRemote == False:
+            noInput = True
+            while noInput == True:
+                userInput = raw_input("Collection cycle complete, type r to repeat, or q to quit: ")
+                if userInput == 'r':
+                    noInput = False
+                elif userInput == 'q':
+                    myControl.close()
+                    myComms.sock.close()
+                    sys.exit()
+                else:
+                    print "invalid arguement, please enter r or q"
     
 
 if __name__ == '__main__':
