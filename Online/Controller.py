@@ -52,7 +52,6 @@ class control:
         #print "secDivision: %d" % int(setList[4])
         #print "controlSelection: %s" % setList[5]
         
-        
         self.CO2Address = setList[0]
         self.PressureAddress = setList[1]
         self.PumpAddress = setList[2]
@@ -66,7 +65,6 @@ class control:
         self.sensors.Pressure.triggerValue = int(setList[7])
         self.pumpVoltage = int(setList[8])
         
-        
         self.myPump = Pumps.output_controller(self.PumpAddress, self.pumpVoltage) #, voltage = self.pumpVoltage)
         self.logging = True            #save CO2, Pressure and other data to txt file?
         self.collectionRun = True      #Run the sample collection pump when the gating algorithm returns True?
@@ -75,7 +73,7 @@ class control:
         self.displayGraphRemote = True  #Writes CO2, Pressure and other data to a socket that can be picked up by
                                             # Richard's web interface
         
-        
+        self.volumeCollectionLimit = 50
         
         if self.controlSelection == 'ui':
             self.controlSelection = raw_input("type c, p or f depending on which sensor you want to control with: ")
@@ -88,7 +86,6 @@ class control:
         self.sensors.Pressure.commLink.close()
         self.myPump.commLink.close()
     
-
     def Runner(self, remoteComms):
         
         self.sock = remoteComms.sock
@@ -105,7 +102,6 @@ class control:
             dataStore = r"C:\Users\simon.kitchen\Documents\Software\Sandbox\Python\Test_rig\Sampling\datafiles\\"
             # Look for datafiles directory one level above this file's location
             #dataStore = os.path.join(os.path.dirname(__file__), "..", "datafiles")
-        
         
         #Set up sampler settings and get breathing pattern:
         print "Now collecting for trigger calculation"
@@ -126,7 +122,6 @@ class control:
         print "Pressure Trigger Val is: %f" % TriggerVals[1]
         #print "*******************************************"
         #raw_input()
-        
         
         self.dataFile = open(dataStore+str(int(FileTime))+".txt", 'w')
         #self.dataFile = open(str(int(self.timeStart))+".txt", 'w')
@@ -153,8 +148,10 @@ class control:
         self.timeStart = time.time()
         counter = 0
         self.collectionLimitReached = False
+        self.sensors.Flow.reset(self.timeStart)
         
-        while time.time()-self.timeStart <= testLength and not self.collectionLimitReached:
+        #while time.time()-self.timeStart <= testLength and not self.collectionLimitReached:
+        while time.time()-self.timeStart <= testLength and self.sensors.Flow.collectedVolume() < self.volumeCollectionLimit:
             CO2, Pressure, Flow, timeStamp = self.sensors.getReadings(self)
             counter = counter + 1
             commands = remoteComms.receive()
@@ -164,7 +161,13 @@ class control:
             if TS < 0:
                 TS = 0
             time.sleep(TS)
+        tt = (time.time()-self.timeStart)
+        print "Total test time was: %f" % tt
+        vv = self.sensors.Flow.collectedVolume()
+        print "Total test collection volume was: %f" % vv
+        print "so which one stopped it: %f, %f" %(testLength, self.volumeCollectionLimit)
     
+
 class Communications:
     def __init__(self):
         print "connecting to socket"

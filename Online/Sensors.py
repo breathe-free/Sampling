@@ -14,7 +14,7 @@ class sensorList:
         #print "got pressure"
         CVal = self.CO2.getReading()
         #print "got CO2"
-        FVal = slef.Flow.getReading()
+        FVal = self.Flow.getReading()
         print "got Flow: %f" % FVal
         timeStamp = time.time()
         if controls.controlSelection == "c" and CVal >= self.CO2.triggerValue:
@@ -37,7 +37,8 @@ class sensorList:
                 controls.myPump.turnOnOff(0)
         
         dataString = "%s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(FVal), str(controls.collecting))
-        
+        self.Flow.currentFlow = FVal
+        self.Flow.currentTime = timeStamp
         if controls.logging == True:
             #print "writing file"
             #print dataString
@@ -86,9 +87,15 @@ class CO2_sensor: #designed for things like CO2, flow or pressure etc   HOW TO M
 
 class Flow_sensor: #Should be rolled into CO2_sensor and just called input sensor
     def __init__(self, commLink, samplePeriod = 0.2):       # Feed in the commlink from Pressure sensor - uses the same board
-       
+        
+        self.totalVolume = 0    # sccm
+        self.lastFlow = 0
+        self.lastTime = 0
+        self.currentFlow = 0
+        self.currentTime = 0
+        
         self.samplePeriod = samplePeriod
-
+    
         self.commLink = commLink
         print "trying outside of IC:"
         self.commLink.write('F')
@@ -108,6 +115,19 @@ class Flow_sensor: #Should be rolled into CO2_sensor and just called input senso
         Flow = float(self.commLink.readline() )
         #print "got pressure"
         return Flow
+    
+    def collectedVolume(self):
+        Vol = ((self.currentFlow+self.lastFlow)/120.0)*(self.currentTime-self.lastTime)      # Flow measured in sccm/min, 120 = 2*60
+        self.totalVolume += Vol
+        self.lastTime = self.currentTime
+        self.lastFlow = self.currentFlow
+        return self.totalVolume
+    
+    def reset(self, startTime):
+        self.lastTime = startTime
+        self.lastFlow = 0
+        self.totalVolume = 0
+
 
 class Pressure_sensor: #Should be rolled into CO2_sensor and just called input sensor
     def __init__(self, connection, samplePeriod = 0.2):
