@@ -247,7 +247,7 @@ class Communications:
     def checkCommands(self):        #sort of equivalent to run in Richard's main function
         
         # read from sock
-        received = receive().next()
+        received = self.receive().next()
         if received is not None and 'command' in received:
             # act on information received
             print "Received: %s" % received
@@ -313,6 +313,8 @@ def mainProgram(remoteControl = True):
                 
                 #myComms loop until got a start command
                 commString = myComms.checkCommands()
+                print type (commString)
+                print commString
                 if commString is not None and commString.find("startsampling") >= 0:
                     print "found something"
                     break
