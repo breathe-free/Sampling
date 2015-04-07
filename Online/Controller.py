@@ -218,6 +218,7 @@ def mainProgram(remoteControl = True):
         except KeyboardInterrupt:
             myControl.close()
             myComms.sock.close()
+            sys.exit()
             
     
         myControl.Runner(myComms)
