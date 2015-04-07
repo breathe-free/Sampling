@@ -214,10 +214,12 @@ def mainProgram(remoteControl = True):
                 if commString.find("startsampling") >= 0:
                     print "found something"
                     break
+                
                 time.sleep(1)
         except KeyboardInterrupt:
             myControl.close()
             myComms.sock.close()
+            sys.exit()
             
     
         myControl.Runner(myComms)
