@@ -207,6 +207,7 @@ class Communications:
         
         self.support = Support_Functions()
         
+        self.state = None
         self.change_state(self.STATES.INITIALISING)
     
     def receive(self):
