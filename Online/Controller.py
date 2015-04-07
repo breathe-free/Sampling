@@ -166,8 +166,8 @@ class Control:
         while time.time()-self.timeStart <= testLength:
             CO2, Pressure, timeStamp = self.sensors.getReadings(self)
             counter = counter + 1
-            commands = remoteComms.receive()
-            if commands.find("stopsampling") >= 0:
+            commands = remoteComms.checkCommands()
+            if commands is not None and commands.find("stopsampling") >= 0:
                 break
             TS = float(counter)/self.secDivision - (time.time()-self.timeStart)
             if TS < 0:
@@ -194,7 +194,7 @@ class Communications:
             print >>sys.stderr, msg
             sys.exit(1)
         
-        self.STATES = enum(
+        self.STATES = self.enum(
             INITIALISING = "initialising",
             WAITING      = "waiting",
             CALIBRATING  = "calibrating",
@@ -241,7 +241,7 @@ class Communications:
     def send(self, message):
         self.sock.sendall(message)
         
-    def enum(**enums):
+    def enum(self, **enums):
         return type('Enum', (), enums)
     
     def checkCommands(self):        #sort of equivalent to run in Richard's main function
@@ -255,10 +255,12 @@ class Communications:
             do_what = received['command']
             if do_what == "stop":
                 self.change_state(self.STATES.WAITING)
+                return "stopsampling"
             
             elif do_what == "start":
                 self.emit_state(message="Using settings: " + json.dumps(received['settings']), severity="info")
                 self.change_state(self.STATES.CALIBRATING)
+                return "startsampling"
 
             elif do_what == "request_state":
                 self.emit_state()
@@ -283,7 +285,8 @@ class Support_Functions:
     def __init__(self):
         pass
     def saveSettings(self, settings):
-        pass    #save to user settings file (overwrite)
+        with open("UserDefinedSettings.txt", "w") as outfile:
+            json.dump(settings, outfile)            #save to user settings file (overwrite)
     
     def loadSettings(self, source):
         if source == "user":
@@ -292,7 +295,7 @@ class Support_Functions:
             pass
         else:
             pass
-    return settings
+        return settings
     
     
     
@@ -309,8 +312,8 @@ def mainProgram(remoteControl = True):
             while remoteControl == True:
                 
                 #myComms loop until got a start command
-                commString = myComms.receive()
-                if commString.find("startsampling") >= 0:
+                commString = myComms.checkCommands()
+                if commString is not None and commString.find("startsampling") >= 0:
                     print "found something"
                     break
                 time.sleep(1)
