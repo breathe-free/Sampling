@@ -7,7 +7,8 @@ class sensorList:
     def __init__(self, CO2Ad, PressureAd, MFC):
         self.CO2 = CO2_sensor(CO2Ad)
         self.Pressure = Pressure_sensor(PressureAd)
-        if MFC:
+        self.MFC = MFC
+        if self.MFC:
             self.Flow = Flow_sensor(self.Pressure.commLink)
         
     def getReadings(self, controls):
@@ -15,7 +16,7 @@ class sensorList:
         #print "got pressure"
         CVal = self.CO2.getReading()
         #print "got CO2"
-        if MFC:
+        if self.MFC:
             FVal = self.Flow.getReading()
             print "got Flow: %f" % FVal
         timeStamp = time.time()
@@ -61,7 +62,7 @@ class sensorList:
             else:
                 controls.myPump.turnOnOff(0)
         
-        if MFC:
+        if self.MFC:
             dataString = "%s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(FVal), str(controls.collecting))
             self.Flow.currentFlow = FVal
             self.Flow.currentTime = timeStamp
@@ -74,7 +75,7 @@ class sensorList:
         if controls.displayGraphRemote == True:
             
             controls.sock.sendall(dataString)
-        if MFC:
+        if self.MFC:
             return CVal, PVal, FVal, timeStamp
         else:
             return CVal, PVal, timeStamp

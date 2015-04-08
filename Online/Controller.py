@@ -65,6 +65,9 @@ class Control:
         #print "secDivision: %d" % int(setList[4])
         #print "controlSelection: %s" % setList[5]
         
+        self.MFC = True     # Flag if whether MFC is attached or not
+        self.volumeCollectionLimit = 50
+        
         self.CO2Address = setList[0]
         self.PressureAddress = setList[1]
         self.PumpAddress = setList[2]
@@ -73,7 +76,7 @@ class Control:
         self.controlSelection = setList[5]
         #print self.CO2Address
         #print "trying to make sensor List"
-        self.sensors = Sensors.sensorList(self.CO2Address, self.PressureAddress)
+        self.sensors = Sensors.sensorList(self.CO2Address, self.PressureAddress, self.MFC)
         self.sensors.CO2.triggerValues = [float(setList[6]), float(setList[6])]
         self.sensors.Pressure.triggerValues = [int(setList[7]), int(setList[7])]
         self.pumpVoltage = int(setList[8])
@@ -96,9 +99,6 @@ class Control:
         self.displayGraphLocal = False  #Plots the graph in a matplotlib animation locally
         self.displayGraphRemote = True  #Writes CO2, Pressure and other data to a socket that can be picked up by
                                             # Richard's web interface
-
-        self.MFC = True     # Flag if whether MFC is attached or not
-        self.volumeCollectionLimit = 50
         
         if self.controlSelection == 'ui':
             self.controlSelection = raw_input("type c, p or f depending on which sensor you want to control with: ")
@@ -196,7 +196,7 @@ class Control:
         counter = 0
         self.collectionLimitReached = False
         #while time.time()-self.timeStart <= testLength and not self.collectionLimitReached:
-        if MFC:
+        if self.MFC:
             self.sensors.Flow.reset(self.timeStart)
             while time.time()-self.timeStart <= testLength and self.sensors.Flow.collectedVolume() < self.volumeCollectionLimit:
                 CO2, Pressure, Flow, timeStamp = self.sensors.getReadings(self)
