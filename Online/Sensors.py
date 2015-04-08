@@ -63,6 +63,10 @@ class sensorList:
                 controls.myPump.turnOnOff(0)
         
         if self.MFC:
+            print type(PVal)
+            print type(CVal)
+            print type(FVal)
+            
             dataString = "%s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(FVal), str(controls.collecting))
             self.Flow.currentFlow = FVal
             self.Flow.currentTime = timeStamp
