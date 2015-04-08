@@ -177,9 +177,6 @@ class Pressure_sensor: #Should be rolled into CO2_sensor and just called input s
     def getReading(self):
         self.commLink.write('P')
         #print "written r to Arduino"
-        prePress = self.commLink.readline()
-        print type(prePress)
-        print "prePress is : " + prePress
-        pressure = float( prePress )
+        pressure = float( self.commLink.readline() )
         #print "got pressure"
         return pressure
