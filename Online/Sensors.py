@@ -18,7 +18,6 @@ class sensorList:
         #print "got CO2"
         if self.MFC:
             FVal = self.Flow.getReading()
-            print "got Flow: %f" % FVal
         timeStamp = time.time()
         
         if isinstance(controls.sensors.CO2.triggerValues, list):
@@ -63,11 +62,8 @@ class sensorList:
                 controls.myPump.turnOnOff(0)
         
         if self.MFC:
-            print type(PVal)
-            print type(CVal)
-            print type(FVal)
             
-            dataString = "%s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(FVal), str(controls.collecting))
+            dataString = "%s, %s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(FVal), str(controls.collecting))
             self.Flow.currentFlow = FVal
             self.Flow.currentTime = timeStamp
         else:
