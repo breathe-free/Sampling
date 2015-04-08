@@ -17,8 +17,21 @@ import socket
 import os
 import TriggerSetting
 
+import json
+#import csv     # Nice idea, not currently executed
 
-class control:
+DEFAULT_SETTINGS = {
+    "calibration_time":         10,
+    "sample_collection_time":   30,
+    "collection_control":       "p",
+    "default_trigger_co2":      2.5,
+    "default_trigger_pressure": 1000,
+    "auto_triggers":            True,
+    "collection_rate":          500,
+    "collection_limit":         50,
+}
+
+class Control:
     #code
     def __init__(self):
         
@@ -61,9 +74,20 @@ class control:
         #print self.CO2Address
         #print "trying to make sensor List"
         self.sensors = Sensors.sensorList(self.CO2Address, self.PressureAddress)
-        self.sensors.CO2.triggerValue = float(setList[6])
-        self.sensors.Pressure.triggerValue = int(setList[7])
+        self.sensors.CO2.triggerValues = [float(setList[6]), float(setList[6])]
+        self.sensors.Pressure.triggerValues = [int(setList[7]), int(setList[7])]
         self.pumpVoltage = int(setList[8])
+        
+        self.settings = {
+            "calibration_time":         10,
+            "sample_collection_time":   self.testLength,
+            "collection_control":       "p",
+            "default_trigger_co2":      2,
+            "default_trigger_pressure": 1000,
+            "auto_triggers":            True,
+            "collection_rate":          500,
+            "collection_limit":         50,
+        }
         
         self.myPump = Pumps.output_controller(self.PumpAddress, self.pumpVoltage) #, voltage = self.pumpVoltage)
         self.logging = True            #save CO2, Pressure and other data to txt file?
@@ -72,6 +96,7 @@ class control:
         self.displayGraphLocal = False  #Plots the graph in a matplotlib animation locally
         self.displayGraphRemote = True  #Writes CO2, Pressure and other data to a socket that can be picked up by
                                             # Richard's web interface
+
         self.MFC = True     # Flag if whether MFC is attached or not
         self.volumeCollectionLimit = 50
         
@@ -80,6 +105,7 @@ class control:
         
         if self.testLength == 'ui':
             self.testLength = int(raw_input("enter number of seconds to collect data: "))
+            
     
     def close(self):
         self.sensors.CO2.commLink.close()
@@ -87,7 +113,7 @@ class control:
         self.myPump.commLink.close()
     
     def Runner(self, remoteComms):
-        
+
         self.sock = remoteComms.sock
         
         self.timeStart = time.time()
@@ -102,62 +128,81 @@ class control:
             dataStore = r"C:\Users\simon.kitchen\Documents\Software\Sandbox\Python\Test_rig\Sampling\datafiles\\"
             # Look for datafiles directory one level above this file's location
             #dataStore = os.path.join(os.path.dirname(__file__), "..", "datafiles")
+    
+        setupFileName = dataStore+str(int(FileTime))+"CalibrationData.txt"
+        self.dataFile = open(setupFileName, 'w')
+        #json.dump(self.settings, self.dataFile)
+        #self.dataFile.write("\n Calibrating Data Starts Here \n")
         
         #Set up sampler settings and get breathing pattern:
         print "Now collecting for trigger calculation"
-        setupFileName = dataStore+str(int(FileTime))+" SetupConfig.txt"
-        self.dataFile = open(setupFileName, 'w')
+        
         statusHolder = self.collectionRun       # ensure the pump doesn't run during this phase and collect the wrong sample
         self.collectionRun = False
-        self.localLoop(10, remoteComms)    #callibration time, 30sec should allow 5 breaths, a good average
+
+        remoteComms.change_state(remoteComms.STATES.CALIBRATING)
+        self.localLoop(self.settings["calibration_time"], remoteComms)    #callibration time, 30sec should allow 5 breaths, a good average
         self.dataFile.close()
         self.collectionRun = statusHolder       #turn pump back on to previous settings
-        
+        remoteComms.change_state(remoteComms.STATES.ANALYSING)
         triggerCal = TriggerSetting.TriggerCalcs()
         TriggerVals = triggerCal.calculate(setupFileName)
-        self.sensors.CO2.triggerValue = TriggerVals[0]
-        self.sensors.Pressure.triggerValue = TriggerVals[1]
+        self.sensors.CO2.triggerValues = TriggerVals[0]
+        self.sensors.Pressure.triggerValues = TriggerVals[1]
+        print type(TriggerVals)
+        #self.dataFile.write("\n Trigger values for this collection run are: \n")
+        if isinstance(TriggerVals[0], list):
+            print "*******************************************"
+            for iii in range(2):
+                print iii
+                print "CO2 Trigger Val is: %f" % TriggerVals[iii][0]
+                print "Pressure Trigger Val is: %f" % TriggerVals[iii][1]
+                
+        else:
+            print"##############################################"
+            print "CO2 Trigger Val is: %f" % TriggerVals[0]
+            print "Pressure Trigger Val is: %f" % TriggerVals[1]
         
-        print "CO2 Trigger Val is: %f" % TriggerVals[0]
-        print "Pressure Trigger Val is: %f" % TriggerVals[1]
-        #print "*******************************************"
-        #raw_input()
+        settingFileName = dataStore+str(int(FileTime))+"RunSettings.txt"
+        self.settingFile = open(settingFileName, 'w')
+        json.dump(self.settings, self.settingFile)
+        json.dump(TriggerVals, self.settingFile)
+        self.settingFile.close()
         
-        self.dataFile = open(dataStore+str(int(FileTime))+".txt", 'w')
-        #self.dataFile = open(str(int(self.timeStart))+".txt", 'w')
-        
+        setupFileName = dataStore+str(int(FileTime))+".txt"
+        self.dataFile = open(setupFileName, 'w')
         if self.CO2DrawThrough == True:
             #print "turning pump on"
             self.myPump.turnOnOff(1)
             time.sleep(1)
         
         print "measurement loop"
-        
+        self.dataFile.write("\n Collection Data Starts Here \n")
+        remoteComms.change_state(remoteComms.STATES.COLLECTING)
         if self.displayGraphLocal == True:
             self.Grapher = RTP.graphing()
             self.Grapher.runGraphingLoop(self)
         elif self.displayGraphLocal == False:
-            self.localLoop(self.testLength, remoteComms)
+            self.localLoop(self.settings["sample_collection_time"], remoteComms)
             
         print "finished collecting"
         self.myPump.turnOnOff(0)
         self.dataFile.close()
+        remoteComms.change_state(remoteComms.STATES.WAITING)
         print "done!!!"
         
     def localLoop(self, testLength, remoteComms):
         self.timeStart = time.time()
         counter = 0
         self.collectionLimitReached = False
-        if MFC:
-            self.sensors.Flow.reset(self.timeStart)
-        
         #while time.time()-self.timeStart <= testLength and not self.collectionLimitReached:
         if MFC:
+            self.sensors.Flow.reset(self.timeStart)
             while time.time()-self.timeStart <= testLength and self.sensors.Flow.collectedVolume() < self.volumeCollectionLimit:
                 CO2, Pressure, Flow, timeStamp = self.sensors.getReadings(self)
                 counter = counter + 1
-                commands = remoteComms.receive()
-                if commands.find("stopsampling") >= 0:
+                commands = remoteComms.checkCommands(self)
+                if commands is not None and commands.find("stopsampling") >= 0:
                     break
                 TS = float(counter)/self.secDivision - (time.time()-self.timeStart)
                 if TS < 0:
@@ -173,8 +218,8 @@ class control:
             while time.time()-self.timeStart <= testLength:
                 CO2, Pressure, timeStamp = self.sensors.getReadings(self)
                 counter = counter + 1
-                commands = remoteComms.receive()
-                if commands.find("stopsampling") >= 0:
+                commands = remoteComms.checkCommands(self)
+                if commands is not None and commands.find("stopsampling") >= 0:
                     break
                 TS = float(counter)/self.secDivision - (time.time()-self.timeStart)
                 if TS < 0:
@@ -182,7 +227,7 @@ class control:
                 time.sleep(TS)
 
 class Communications:
-    def __init__(self):
+    def __init__(self, controls):
         print "connecting to socket"
         server_address = '/tmp/lucidity.socket'
 
@@ -200,58 +245,159 @@ class Communications:
         except socket.error, msg:
             print >>sys.stderr, msg
             sys.exit(1)
+        
+        self.STATES = self.enum(
+            INITIALISING = "initialising",
+            WAITING      = "waiting",
+            CALIBRATING  = "calibrating",
+            ANALYSING    = "analysing",
+            COLLECTING   = "collecting",
+        )
+        self.ACTIVE_STATES = [ self.STATES.CALIBRATING, self.STATES.ANALYSING, self.STATES.COLLECTING ]
+        
+        self.support = Support_Functions()
+        
+        self.state = None
+        self.change_state(self.STATES.INITIALISING)
+    
     def receive(self):
-        # Return either an empty string (if nothing received)
-        # or the contents of any incoming message
-        try:
-            return self.sock.recv(1024)
-        except socket.error:
-            return ""
+        # Act as an iterator.  Sometimes >1 message will have accumulated on the
+        # socket by the time we come to read it.
+        # Yield either None (if nothing received, buffer empty) or json decode line by line.
+        rbuffer = ''
+        while True:
+            try:
+                incoming = self.sock.recv(1024)
+                rbuffer += incoming
+            except socket.error:
+                # nothing to read
+                yield None
+                continue
     
+            while rbuffer.find("\n") != -1:
+                line, rbuffer = rbuffer.split("\n", 1)
+                try:
+                    yield json.loads(line)
+                except ValueError, e:
+                    print >>sys.stderr, str(e)
+                    print >>sys.stderr, line
     
+    def change_state(self, new_state, message=None, severity=None):
+        if self.state != new_state:
+            message = "State changed to %s." % new_state
+            severity = "info"
+        self.state = new_state
+        self.emit_state(message=message, severity="info")
+    
+    def emit_state(self, **kwargs):
+        h = {"state": self.state}
+        for key,val in kwargs.iteritems():
+            h[key] = val
+        self.send(json.dumps(h) + "\n") 
+    
+    def send(self, message):
+        self.sock.sendall(message)
+        
+    def enum(self, **enums):
+        return type('Enum', (), enums)
+    
+    def checkCommands(self, controls):        #sort of equivalent to run in Richard's main function
+        # read from sock
+        received = self.receive().next()
+        if received is not None and 'command' in received:
+            # act on information received
+            print "Received: %s" % received
+            
+            do_what = received['command']
+            if do_what == "stop":
+                self.change_state(self.STATES.WAITING)
+                return "stopsampling"
+            
+            elif do_what == "start":
+                self.emit_state(message="Using settings: " + json.dumps(received['settings']), severity="info")
+                self.change_state(self.STATES.CALIBRATING)
+                return "startsampling"
 
+            elif do_what == "request_state":
+                self.emit_state()
+            
+            elif do_what == "request_settings_current":
+                self.emit_state(settings=controls.settings)
+            
+            elif do_what == "apply_settings_default":
+                controls.settings = self.support.loadSettings("default")
+                self.emit_state(settings=controls.settings, message="Loaded default settings.", severity="info")
+            
+            elif do_what == "apply_settings_user":
+                controls.settings = self.support.loadSettings("user")
+                self.emit_state(settings=controls.settings, message="Loaded user settings.", severity="info")
+            
+            elif do_what == "save_settings":
+                settings = received['settings']
+                self.support.saveSettings(settings)
+                self.emit_state(settings=controls.settings, message="Saved user settings.", severity="info")
+
+class Support_Functions:
+    def __init__(self):
+        pass
+    def saveSettings(self, settings):
+        with open("UserDefinedSettings.txt", "w") as outfile:
+            json.dump(settings, outfile)            #save to user settings file (overwrite)
+    
+    def loadSettings(self, source):
+        if source == "user":
+            with open("UserDefinedSettings.txt", "r") as infile:
+                return json.load(infile)            #load from user settings file (overwrite)
+
+        elif source == "default":
+            return DEFAULT_SETTINGS
+        else:
+            pass
+        return settings
 
 
 def mainProgram(remoteControl = True):
-    myControl = control()
-    myComms = Communications()
+    myControl = Control()
+    myComms = Communications(myControl)
     
     while True:
         
         try:
             print "waiting for response from web interface"
+
+            myComms.change_state(myComms.STATES.WAITING)
             while remoteControl == True:
                 
                 #myComms loop until got a start command
-                commString = myComms.receive()
-                if commString.find("startsampling") >= 0:
+                commString = myComms.checkCommands(myControl)
+
+                if commString is not None and commString.find("startsampling") >= 0:
                     print "found something"
                     break
-                
                 time.sleep(1)
         except KeyboardInterrupt:
+            print "Keyboard used to interrupt - do I need to close something here?"
+            
             myControl.close()
             myComms.sock.close()
             sys.exit()
-            
     
         myControl.Runner(myComms)
-        noInput = True
-        while noInput == True:
-            userInput = raw_input("Collection cycle complete, type r to repeat, or q to quit: ")
-            if userInput == 'r':
-                noInput = False
-            elif userInput == 'q':
-                myControl.close()
-                myComms.sock.close()
-                sys.exit()
-            else:
-                print "invalid arguement, please enter r or q"
+        if myControl.displayGraphRemote == False:
+            noInput = True
+            while noInput == True:
+                userInput = raw_input("Collection cycle complete, type r to repeat, or q to quit: ")
+                if userInput == 'r':
+                    noInput = False
+                elif userInput == 'q':
+                    myControl.close()
+                    myComms.sock.close()
+                    sys.exit()
+                else:
+                    print "invalid arguement, please enter r or q"
     
 
 if __name__ == '__main__':
     
     remoteControl = True
     mainProgram(remoteControl)
-    
-    
