@@ -197,6 +197,7 @@ class Control:
         self.collectionLimitReached = False
         #while time.time()-self.timeStart <= testLength and not self.collectionLimitReached:
         if self.MFC:
+            print "I thought MFC was True"
             self.sensors.Flow.reset(self.timeStart)
             while time.time()-self.timeStart <= testLength and self.sensors.Flow.collectedVolume() < self.volumeCollectionLimit:
                 CO2, Pressure, Flow, timeStamp = self.sensors.getReadings(self)
@@ -215,6 +216,7 @@ class Control:
             print "Total test collection volume was: %f" % vv
             print "so which one stopped it: %f, %f" %(testLength, self.volumeCollectionLimit)
         else:
+            print " I think MFC is False"
             while time.time()-self.timeStart <= testLength:
                 CO2, Pressure, timeStamp = self.sensors.getReadings(self)
                 counter = counter + 1
