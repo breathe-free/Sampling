@@ -64,6 +64,7 @@ class sensorList:
         if self.MFC:
             
             dataString = "%s, %s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(FVal), str(controls.collecting))
+            
             self.Flow.currentFlow = FVal
             self.Flow.currentTime = timeStamp
         else:
@@ -144,6 +145,12 @@ class Flow_sensor: #Should be rolled into CO2_sensor and just called input senso
         return Flow
     
     def collectedVolume(self):
+        print "***************Timings *************************"
+        print self.lastTime
+        print self.currentTime
+        print "***************Flows ***************************"
+        print self.lastFlow
+        print self.currentFlow
         Vol = ((self.currentFlow+self.lastFlow)/120.0)*(self.currentTime-self.lastTime)      # Flow measured in sccm/min, 120 = 2*60
         self.totalVolume += Vol
         self.lastTime = self.currentTime
