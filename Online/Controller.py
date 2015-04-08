@@ -195,6 +195,7 @@ class Control:
         self.timeStart = time.time()
         counter = 0
         self.collectionLimitReached = False
+        self.sensors.Flow.lastTime = self.timeStart
         #while time.time()-self.timeStart <= testLength and not self.collectionLimitReached:
         if self.MFC:
             print "I thought MFC was True"
