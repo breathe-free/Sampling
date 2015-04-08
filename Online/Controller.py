@@ -361,24 +361,22 @@ class Support_Functions:
 def mainProgram(remoteControl = True):
     myControl = Control()
     myComms = Communications(myControl)
+    if not myControl.sensors.Flow.Available:
+        myComms.emit_state(message="WARNING: No MFC connected", severity="warning")
     
     while True:
-        
         try:
             print "waiting for response from web interface"
-
             myComms.change_state(myComms.STATES.WAITING)
             while remoteControl == True:
-                
                 #myComms loop until got a start command
                 commString = myComms.checkCommands(myControl)
-
                 if commString is not None and commString.find("startsampling") >= 0:
                     print "found something"
                     break
                 time.sleep(1)
         except KeyboardInterrupt:
-            print "Keyboard used to interrupt - do I need to close something here?"
+            #print "Keyboard used to interrupt - do I need to close something here?"
             
             myControl.close()
             myComms.sock.close()
