@@ -40,19 +40,18 @@ class sensorList:
                 #print "continue as is"
                 pass
             
-        
         else:
             if controls.settings["collection_control"] == "c" and CVal >= controls.sensors.CO2.triggerValues:
                 print "collecting"
                 controls.collecting = controls.sensors.CO2.triggerValues
-        
+            
             elif controls.settings["collection_control"] == "p" and PVal >= controls.sensors.Pressure.triggerValues:
                 print "collecting"
                 controls.collecting = controls.sensors.Pressure.triggerValues
-        
+            
             else:
                 controls.collecting = 0
-        
+            
         if controls.collectionRun == True:
             #print "now at pump"
             if controls.collecting >= 1:
@@ -62,11 +61,9 @@ class sensorList:
                 controls.myPump.turnOnOff(0)
         
         if self.MFC:
-            
-            dataString = "%s, %s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(FVal), str(controls.collecting))
-            
             self.Flow.currentFlow = FVal
             self.Flow.currentTime = timeStamp
+            dataString = "%s, %s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(FVal), str(controls.collecting))
         else:
             dataString = "%s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(controls.collecting))
         if controls.logging == True:
@@ -159,6 +156,7 @@ class Flow_sensor: #Should be rolled into CO2_sensor and just called input senso
     
     def reset(self, startTime):
         self.lastTime = startTime
+        self.currentTime = startTime
         self.lastFlow = 0
         self.totalVolume = 0
 
