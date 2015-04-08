@@ -72,7 +72,7 @@ class control:
         self.displayGraphLocal = False  #Plots the graph in a matplotlib animation locally
         self.displayGraphRemote = True  #Writes CO2, Pressure and other data to a socket that can be picked up by
                                             # Richard's web interface
-        
+        self.MFC = True     # Flag if whether MFC is attached or not
         self.volumeCollectionLimit = 50
         
         if self.controlSelection == 'ui':
@@ -148,25 +148,38 @@ class control:
         self.timeStart = time.time()
         counter = 0
         self.collectionLimitReached = False
-        self.sensors.Flow.reset(self.timeStart)
+        if MFC:
+            self.sensors.Flow.reset(self.timeStart)
         
         #while time.time()-self.timeStart <= testLength and not self.collectionLimitReached:
-        while time.time()-self.timeStart <= testLength and self.sensors.Flow.collectedVolume() < self.volumeCollectionLimit:
-            CO2, Pressure, Flow, timeStamp = self.sensors.getReadings(self)
-            counter = counter + 1
-            commands = remoteComms.receive()
-            if commands.find("stopsampling") >= 0:
-                break
-            TS = float(counter)/self.secDivision - (time.time()-self.timeStart)
-            if TS < 0:
-                TS = 0
-            time.sleep(TS)
-        tt = (time.time()-self.timeStart)
-        print "Total test time was: %f" % tt
-        vv = self.sensors.Flow.collectedVolume()
-        print "Total test collection volume was: %f" % vv
-        print "so which one stopped it: %f, %f" %(testLength, self.volumeCollectionLimit)
-    
+        if MFC:
+            while time.time()-self.timeStart <= testLength and self.sensors.Flow.collectedVolume() < self.volumeCollectionLimit:
+                CO2, Pressure, Flow, timeStamp = self.sensors.getReadings(self)
+                counter = counter + 1
+                commands = remoteComms.receive()
+                if commands.find("stopsampling") >= 0:
+                    break
+                TS = float(counter)/self.secDivision - (time.time()-self.timeStart)
+                if TS < 0:
+                    TS = 0
+                time.sleep(TS)
+            
+            tt = (time.time()-self.timeStart)
+            print "Total test time was: %f" % tt
+            vv = self.sensors.Flow.collectedVolume()
+            print "Total test collection volume was: %f" % vv
+            print "so which one stopped it: %f, %f" %(testLength, self.volumeCollectionLimit)
+        else:
+            while time.time()-self.timeStart <= testLength:
+                CO2, Pressure, timeStamp = self.sensors.getReadings(self)
+                counter = counter + 1
+                commands = remoteComms.receive()
+                if commands.find("stopsampling") >= 0:
+                    break
+                TS = float(counter)/self.secDivision - (time.time()-self.timeStart)
+                if TS < 0:
+                    TS = 0
+                time.sleep(TS)
 
 class Communications:
     def __init__(self):

@@ -4,18 +4,20 @@ from serial import Serial
 import time
 
 class sensorList:
-    def __init__(self, CO2Ad, PressureAd):
+    def __init__(self, CO2Ad, PressureAd, MFC):
         self.CO2 = CO2_sensor(CO2Ad)
         self.Pressure = Pressure_sensor(PressureAd)
-        self.Flow = Flow_sensor(self.Pressure.commLink)
+        if MFC:
+            self.Flow = Flow_sensor(self.Pressure.commLink)
         
     def getReadings(self, controls):
         PVal = self.Pressure.getReading()
         #print "got pressure"
         CVal = self.CO2.getReading()
         #print "got CO2"
-        FVal = self.Flow.getReading()
-        print "got Flow: %f" % FVal
+        if MFC:
+            FVal = self.Flow.getReading()
+            print "got Flow: %f" % FVal
         timeStamp = time.time()
         if controls.controlSelection == "c" and CVal >= self.CO2.triggerValue:
             print "collecting"
@@ -36,9 +38,10 @@ class sensorList:
             else:
                 controls.myPump.turnOnOff(0)
         
-        dataString = "%s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(FVal), str(controls.collecting))
-        self.Flow.currentFlow = FVal
-        self.Flow.currentTime = timeStamp
+        if MFC:
+            dataString = "%s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(FVal), str(controls.collecting))
+            self.Flow.currentFlow = FVal
+            self.Flow.currentTime = timeStamp
         if controls.logging == True:
             #print "writing file"
             #print dataString
@@ -46,9 +49,10 @@ class sensorList:
         if controls.displayGraphRemote == True:
             
             controls.sock.sendall(dataString)
-           
-        
-        return CVal, PVal, FVal, timeStamp
+        if MFC:
+            return CVal, PVal, FVal, timeStamp
+        else:
+            return CVal, PVal, timeStamp
     
 
 class CO2_sensor: #designed for things like CO2, flow or pressure etc   HOW TO MERGE THE SENSOR TYPES?????
@@ -58,7 +62,6 @@ class CO2_sensor: #designed for things like CO2, flow or pressure etc   HOW TO M
         self.triggerValue = 3.2
 
         self.commLink = self.initialiseConnection()
-        
 
     def initialiseConnection(self):
         print r"%s" % self.connection
