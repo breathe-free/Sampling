@@ -65,20 +65,21 @@ class Control:
         
         self.MFC = True     # Flag if whether MFC is attached or not
         self.volumeCollectionLimit = 50
+        self.settings = DEFAULT_SETTINGS
         
         print "getting settings"
         try:
             self.CO2Address = setList[0]
             self.PressureAddress = setList[1]
             self.PumpAddress = setList[2]
-            self.testLength = int(setList[3])
+            #self.testLength = int(setList[3])
             self.secDivision = int(setList[4])
-            self.controlSelection = setList[5]
+            #self.controlSelection = setList[5]
             #print self.CO2Address
             #print "trying to make sensor List"
             self.sensors = Sensors.sensorList(self.CO2Address, self.PressureAddress, self.MFC)
-            self.sensors.CO2.triggerValues = [float(setList[6]), float(setList[6])]
-            self.sensors.Pressure.triggerValues = [int(setList[7]), int(setList[7])]
+            self.sensors.CO2.triggerValues = [float(self.settings["default_trigger_co2"]), float(self.settings["default_trigger_co2"])]
+            self.sensors.Pressure.triggerValues = [int(self.settings["default_trigger_pressure"]), int(self.settings["default_trigger_pressure"])]
             self.pumpVoltage = int(setList[8])
             self.pumpOnPercentage = float(setList[10])
             self.pumpOffPercentage = float(setList[11])
@@ -87,16 +88,6 @@ class Control:
             print "ran out of settings early"
         
         print "finished in settings"
-        self.settings = {
-            "calibration_time":         10,
-            "sample_collection_time":   self.testLength,
-            "collection_control":       "p",
-            "default_trigger_co2":      2,
-            "default_trigger_pressure": 1000,
-            "auto_triggers":            True,
-            "collection_rate":          500,
-            "collection_limit":         50,
-        }
         
         self.myPump = Pumps.output_controller(self.PumpAddress, self.pumpVoltage) #, voltage = self.pumpVoltage)
         self.logging = True            #save CO2, Pressure and other data to txt file?
@@ -106,13 +97,6 @@ class Control:
         self.displayGraphRemote = True  #Writes CO2, Pressure and other data to a socket that can be picked up by
                                             # Richard's web interface
         
-        if self.controlSelection == 'ui':
-            self.controlSelection = raw_input("type c, p or f depending on which sensor you want to control with: ")
-        
-        if self.testLength == 'ui':
-            self.testLength = int(raw_input("enter number of seconds to collect data: "))
-            
-    
     def close(self):
         self.sensors.CO2.commLink.close()
         self.sensors.Pressure.commLink.close()
@@ -174,7 +158,7 @@ class Control:
         json.dump(TriggerVals, self.settingFile)
         self.settingFile.close()
         
-        setupFileName = dataStore+str(int(FileTime))+".txt"
+        setupFileName = dataStore+str(int(FileTime))+"CollectionData.txt"
         self.dataFile = open(setupFileName, 'w')
         if self.CO2DrawThrough == True:
             #print "turning pump on"
@@ -203,9 +187,9 @@ class Control:
         
         #while time.time()-self.timeStart <= testLength and not self.collectionLimitReached:
         if self.MFC:
-            print "I thought MFC was True"
+            print "MFC is True"
             self.sensors.Flow.reset(self.timeStart)
-            while time.time()-self.timeStart <= testLength and self.sensors.Flow.collectedVolume() < self.volumeCollectionLimit:
+            while time.time()-self.timeStart <= testLength and self.sensors.Flow.collectedVolume() < self.settings["collection_limit"]:
                 CO2, Pressure, Flow, timeStamp = self.sensors.getReadings(self)
                 counter = counter + 1
                 commands = remoteComms.checkCommands(self)
@@ -220,9 +204,9 @@ class Control:
             print "Total test time was: %f" % tt
             vv = self.sensors.Flow.collectedVolume()
             print "Total test collection volume was: %f" % vv
-            print "so which one stopped it: %f, %f" %(testLength, self.volumeCollectionLimit)
+            print "so which one stopped it: %f, %f" %(testLength, self.settings["collection_limit"])
         else:
-            print " I think MFC is False"
+            print "MFC is False"
             while time.time()-self.timeStart <= testLength:
                 CO2, Pressure, timeStamp = self.sensors.getReadings(self)
                 counter = counter + 1
@@ -324,6 +308,7 @@ class Communications:
             elif do_what == "start":
                 self.emit_state(message="Using settings: " + json.dumps(received['settings']), severity="info")
                 self.change_state(self.STATES.CALIBRATING)
+                controls.settings = received['settings']
                 return "startsampling"
 
             elif do_what == "request_state":
@@ -338,7 +323,11 @@ class Communications:
             
             elif do_what == "apply_settings_user":
                 controls.settings = self.support.loadSettings("user")
-                self.emit_state(settings=controls.settings, message="Loaded user settings.", severity="info")
+                if controls.settings == -1:
+                    controls.settings = self.support.loadSettings("default")
+                    self.emit_state(settings=controls.settings, message="WARNING: User settings not available, have loaded default settings instead.", severity="warning")
+                else:
+                    self.emit_state(settings=controls.settings, message="Loaded user settings.", severity="info")
             
             elif do_what == "save_settings":
                 settings = received['settings']
@@ -354,14 +343,17 @@ class Support_Functions:
     
     def loadSettings(self, source):
         if source == "user":
-            with open("UserDefinedSettings.txt", "r") as infile:
-                return json.load(infile)            #load from user settings file (overwrite)
+            try:
+                with open("UserDefinedSettings.txt", "r") as infile:
+                    return json.load(infile)            #load from user settings file (overwrite)
+            except:
+                print "Print no available User Settings file, have loaded nothing instead"
+                return -1
 
         elif source == "default":
             return DEFAULT_SETTINGS
         else:
-            pass
-        return settings
+            return DEFAULT_SETTINGS
 
 
 def mainProgram(remoteControl = True):

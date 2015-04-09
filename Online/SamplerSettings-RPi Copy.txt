@@ -1,9 +1,9 @@
 CO2 Sensor Connection Port = /dev/ttyUSB0
 pressure Sensor Connection Port = /dev/ttyACM0
 Pump Controller Connection Port = /dev/ttyUSB1
-Total Test Time = 300
+Total Test Time NotConnected = 300
 Sensor Poll Rate = 5
-Collection Control Level = p
+Collection Control Level NotConnected = p
 CO2 Trigger Limit = 2
 Pressure trigger Limit = 500
 Pump Voltage = 24
