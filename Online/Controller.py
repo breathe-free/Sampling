@@ -52,10 +52,8 @@ class Control:
             #setting.strip("\r")
             #setting.strip("")
             setting = setting.split(" = ")
-            
             for s in setting:
-                s.strip()
-                
+                s.strip() 
             setList.append(setting[1])
         
         #print "CO2 address is: %s" % setList[0]
@@ -68,18 +66,23 @@ class Control:
         self.MFC = True     # Flag if whether MFC is attached or not
         self.volumeCollectionLimit = 50
         
-        self.CO2Address = setList[0]
-        self.PressureAddress = setList[1]
-        self.PumpAddress = setList[2]
-        self.testLength = int(setList[3])
-        self.secDivision = int(setList[4])
-        self.controlSelection = setList[5]
-        #print self.CO2Address
-        #print "trying to make sensor List"
-        self.sensors = Sensors.sensorList(self.CO2Address, self.PressureAddress, self.MFC)
-        self.sensors.CO2.triggerValues = [float(setList[6]), float(setList[6])]
-        self.sensors.Pressure.triggerValues = [int(setList[7]), int(setList[7])]
-        self.pumpVoltage = int(setList[8])
+        try:
+            self.CO2Address = setList[0]
+            self.PressureAddress = setList[1]
+            self.PumpAddress = setList[2]
+            self.testLength = int(setList[3])
+            self.secDivision = int(setList[4])
+            self.controlSelection = setList[5]
+            #print self.CO2Address
+            #print "trying to make sensor List"
+            self.sensors = Sensors.sensorList(self.CO2Address, self.PressureAddress, self.MFC)
+            self.sensors.CO2.triggerValues = [float(setList[6]), float(setList[6])]
+            self.sensors.Pressure.triggerValues = [int(setList[7]), int(setList[7])]
+            self.pumpVoltage = int(setList[8])
+            self.pumpOnPercentage = int(setList[9])
+            self.pumpOffPercentage = int(setList[10])
+        except:
+            print "ran out of settings early"
         
         self.settings = {
             "calibration_time":         10,
@@ -136,7 +139,6 @@ class Control:
         
         #Set up sampler settings and get breathing pattern:
         print "Now collecting for trigger calculation"
-        
         statusHolder = self.collectionRun       # ensure the pump doesn't run during this phase and collect the wrong sample
         self.collectionRun = False
 
@@ -146,7 +148,7 @@ class Control:
         self.collectionRun = statusHolder       #turn pump back on to previous settings
         remoteComms.change_state(remoteComms.STATES.ANALYSING)
         triggerCal = TriggerSetting.TriggerCalcs()
-        TriggerVals = triggerCal.calculate(setupFileName)
+        TriggerVals = triggerCal.calculate(setupFileName, self.pumpOnPercentage, self.pumpOffPercentage)
         self.sensors.CO2.triggerValues = TriggerVals[0]
         self.sensors.Pressure.triggerValues = TriggerVals[1]
         print type(TriggerVals)

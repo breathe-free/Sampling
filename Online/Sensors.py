@@ -65,14 +65,14 @@ class sensorList:
             self.Flow.currentTime = timeStamp
             dataString = "%s, %s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(FVal), str(controls.collecting))
         else:
-            dataString = "%s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(controls.collecting))
+            dataString = "%s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(controls.collecting))
         if controls.logging == True:
             #print "writing file"
             #print dataString
             controls.dataFile.write(dataString)
         if controls.displayGraphRemote == True:
-            
-            controls.sock.sendall(dataString)
+            dataSendString = "%s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(controls.collecting))
+            controls.sock.sendall(dataSendString)
         if self.MFC:
             return CVal, PVal, FVal, timeStamp
         else:

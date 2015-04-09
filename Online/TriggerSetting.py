@@ -62,7 +62,7 @@ class TriggerCalcs:
             return x
     
         if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-            raise ValueError, "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
+            raise ValueError, "Window is one of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
         
         print "got here here here"
         s=numpy.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
@@ -142,18 +142,20 @@ class TriggerCalcs:
         return numpy.mean(finalData)
     
     
-    def setTriggerValues(self, Limits):
+    def setTriggerValues(self, Limits, onPercentage, offPercentage):
         
         interLimitRange = Limits[0]-Limits[1] #peak - trough
+        onVal = onPercentage/100.0
+        offVal = offPercentage/100.0
         
-        OnTrigger = Limits[1] + interLimitRange*0.7 #CUrrently at 50% of range... because it is an illustration
-        OffTrigger = Limits[1] + interLimitRange*0.4 
+        OnTrigger = Limits[1] + interLimitRange*onVal #Currently at 50% of range... because it is an illustration
+        OffTrigger = Limits[1] + interLimitRange*offVal
         
         Triggers = [OnTrigger, OffTrigger]
         
         return Triggers
 
-    def calculate(self, fileName):
+    def calculate(self, fileName, onPercentage, offPercentage):
         data = self.getDataFromFile(fileName)
         
         timeS = []
@@ -170,8 +172,8 @@ class TriggerCalcs:
         extremeCO2, CO2Limits = self.peakDetection(smoothedCO2Data, timeS)          
         extremePressure, PressureLimits = self.peakDetection(smoothedPressureData, timeS)
         
-        CO2Triggers = self.setTriggerValues(CO2Limits)
-        PressureTriggers = self.setTriggerValues(PressureLimits)
+        CO2Triggers = self.setTriggerValues(CO2Limits, onPercentage, offPercentage)
+        PressureTriggers = self.setTriggerValues(PressureLimits, onPercentage, offPercentage)
         
         triggers = [CO2Triggers, PressureTriggers] # TriggerHolder(CO2Triggers, PressureTriggers)
         
