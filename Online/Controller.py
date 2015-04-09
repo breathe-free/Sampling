@@ -66,6 +66,7 @@ class Control:
         self.MFC = True     # Flag if whether MFC is attached or not
         self.volumeCollectionLimit = 50
         
+        print "getting settings"
         try:
             self.CO2Address = setList[0]
             self.PressureAddress = setList[1]
@@ -79,11 +80,13 @@ class Control:
             self.sensors.CO2.triggerValues = [float(setList[6]), float(setList[6])]
             self.sensors.Pressure.triggerValues = [int(setList[7]), int(setList[7])]
             self.pumpVoltage = int(setList[8])
-            self.pumpOnPercentage = int(setList[9])
-            self.pumpOffPercentage = int(setList[10])
+            self.pumpOnPercentage = int(setList[10])
+            self.pumpOffPercentage = int(setList[11])
+            print "got all settings"
         except:
             print "ran out of settings early"
         
+        print "finished in settings"
         self.settings = {
             "calibration_time":         10,
             "sample_collection_time":   self.testLength,

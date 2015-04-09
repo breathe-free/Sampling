@@ -90,7 +90,7 @@ class CO2_sensor: #designed for things like CO2, flow or pressure etc   HOW TO M
         print r"%s" % self.connection
         conn = Serial(self.connection, writeTimeout = 3)    #9600 baud
         #conn = Serial("/dev/ttyUSB0", writeTimeout = 3)    #9600 baud
-        print "starting connection"
+        print "starting CO2 connection"
         for i in range(0, 2):
             conn.write('K 2\r\n')
             time.sleep(0.1)
@@ -167,6 +167,7 @@ class Pressure_sensor: #Should be rolled into CO2_sensor and just called input s
         print self.commLink.readline()
 
     def initialiseConnection(self):
+        print "starting Pressure connection"
         conn = Serial(self.connection, 9600, timeout = 3)
         time.sleep(1)
         conn.write('P')
