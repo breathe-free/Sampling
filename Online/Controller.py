@@ -21,14 +21,14 @@ import json
 #import csv     # Nice idea, not currently executed
 
 DEFAULT_SETTINGS = {
-    "calibration_time":         10,
-    "sample_collection_time":   30,
+    "calibration_time":         20,
+    "sample_collection_time":   300,
     "collection_control":       "p",
     "default_trigger_co2":      2.5,
-    "default_trigger_pressure": 1000,
+    "default_trigger_pressure": 500,
     "auto_triggers":            True,
     "collection_rate":          500,
-    "collection_limit":         50,
+    "collection_limit":         250,
 }
 
 class Control:
@@ -80,8 +80,8 @@ class Control:
             self.sensors.CO2.triggerValues = [float(setList[6]), float(setList[6])]
             self.sensors.Pressure.triggerValues = [int(setList[7]), int(setList[7])]
             self.pumpVoltage = int(setList[8])
-            self.pumpOnPercentage = int(setList[10])
-            self.pumpOffPercentage = int(setList[11])
+            self.pumpOnPercentage = float(setList[10])
+            self.pumpOffPercentage = float(setList[11])
             print "got all settings"
         except:
             print "ran out of settings early"

@@ -20,21 +20,21 @@ class sensorList:
             FVal = self.Flow.getReading()
         timeStamp = time.time()
         
-        if isinstance(controls.sensors.CO2.triggerValues, list):
+        if isinstance(controls.sensors.Pressure.triggerValues, list):
             if controls.settings["collection_control"] == "c" and CVal >= controls.sensors.CO2.triggerValues[0] and controls.collecting==0:
                 print "collecting"
                 controls.collecting = controls.sensors.CO2.triggerValues[0]
             
-            elif controls.settings["collection_control"] == "c" and CVal <= controls.sensors.CO2.triggerValues[1] and controls.collecting>=1:
+            elif controls.settings["collection_control"] == "c" and CVal <= controls.sensors.CO2.triggerValues[1] and controls.collecting!=0:
                 print "stopped collecting"
                 controls.collecting = 0
             
             elif controls.settings["collection_control"] == "p" and PVal >= controls.sensors.Pressure.triggerValues[0] and controls.collecting==0:
-                print "collecting"
+                print "Started pump collecting"
                 controls.collecting = controls.sensors.Pressure.triggerValues[0]
             
-            elif controls.settings["collection_control"] == "p" and PVal <= controls.sensors.Pressure.triggerValues[1] and controls.collecting>=1:
-                print "stopped collecting"
+            elif controls.settings["collection_control"] == "p" and PVal <= controls.sensors.Pressure.triggerValues[1] and controls.collecting!=0:
+                print "stopped pump collecting"
                 controls.collecting = 0
             else:
                 #print "continue as is"
@@ -54,7 +54,7 @@ class sensorList:
             
         if controls.collectionRun == True:
             #print "now at pump"
-            if controls.collecting >= 1:
+            if controls.collecting != 0:
                 
                 controls.myPump.turnOnOff(1)
             else:
@@ -82,7 +82,7 @@ class CO2_sensor: #designed for things like CO2, flow or pressure etc   HOW TO M
     def __init__(self, connection, samplePeriod = 0.2):
         self.connection = connection
         self.samplePeriod = samplePeriod
-        self.triggerValue = 3.2
+        self.triggerValues = 3.2
 
         self.commLink = self.initialiseConnection()
 
@@ -159,7 +159,7 @@ class Pressure_sensor: #Should be rolled into CO2_sensor and just called input s
     def __init__(self, connection, samplePeriod = 0.2):
         self.connection = connection
         self.samplePeriod = samplePeriod
-        self.triggerValue = 350
+        self.triggerValues = 350
 
         self.commLink = self.initialiseConnection()
         print "trying outside of IC:"
