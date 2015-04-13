@@ -10,7 +10,7 @@ class sensorList:
         self.MFC = MFC
         if self.MFC:
             self.Flow = Flow_sensor(self.Pressure.commLink)
-        
+  
     def getReadings(self, controls):
         PVal = self.Pressure.getReading()
         #print "got pressure"
@@ -20,38 +20,8 @@ class sensorList:
             FVal = self.Flow.getReading()
         timeStamp = time.time()
         
-        if isinstance(controls.sensors.Pressure.triggerValues, list):
-            if controls.settings["collection_control"] == "c" and CVal >= controls.sensors.CO2.triggerValues[0] and controls.collecting==0:
-                print "collecting"
-                controls.collecting = controls.sensors.CO2.triggerValues[0]
-            
-            elif controls.settings["collection_control"] == "c" and CVal <= controls.sensors.CO2.triggerValues[1] and controls.collecting!=0:
-                print "stopped collecting"
-                controls.collecting = 0
-            
-            elif controls.settings["collection_control"] == "p" and PVal >= controls.sensors.Pressure.triggerValues[0] and controls.collecting==0:
-                print "Started pump collecting"
-                controls.collecting = controls.sensors.Pressure.triggerValues[0]
-            
-            elif controls.settings["collection_control"] == "p" and PVal <= controls.sensors.Pressure.triggerValues[1] and controls.collecting!=0:
-                print "stopped pump collecting"
-                controls.collecting = 0
-            else:
-                #print "continue as is"
-                pass
-            
-        else:
-            if controls.settings["collection_control"] == "c" and CVal >= controls.sensors.CO2.triggerValues:
-                print "collecting"
-                controls.collecting = controls.sensors.CO2.triggerValues
-            
-            elif controls.settings["collection_control"] == "p" and PVal >= controls.sensors.Pressure.triggerValues:
-                print "collecting"
-                controls.collecting = controls.sensors.Pressure.triggerValues
-            
-            else:
-                controls.collecting = 0
-            
+        controls = self.selectionMatrix(controls)
+        
         if controls.collectionRun == True:
             #print "now at pump"
             if controls.collecting != 0:
@@ -70,6 +40,7 @@ class sensorList:
             #print "writing file"
             #print dataString
             controls.dataFile.write(dataString)
+            
         if controls.displayGraphRemote == True:
             dataSendString = "%s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(controls.collecting))
             controls.sock.sendall(dataSendString)
@@ -77,13 +48,49 @@ class sensorList:
             return CVal, PVal, FVal, timeStamp
         else:
             return CVal, PVal, timeStamp
+    
+    def selectionMatrix(self, controls):
+        if isinstance(controls.sensors.Pressure.triggerValues, list):
+            if controls.settings["collection_control"] == "c" and CVal >= controls.sensors.CO2.triggerValues[0] and controls.collecting==0:
+                print "collecting"
+                controls.collecting = controls.sensors.CO2.triggerValues[0]
+            
+            elif controls.settings["collection_control"] == "c" and CVal <= controls.sensors.CO2.triggerValues[1] and controls.collecting!=0:
+                print "stopped collecting"
+                controls.collecting = 0
+            
+            elif controls.settings["collection_control"] == "p" and PVal >= controls.sensors.Pressure.triggerValues[0] and controls.collecting==0:
+                print "Started pump collecting"
+                controls.collecting = controls.sensors.Pressure.triggerValues[0]
+            
+            elif controls.settings["collection_control"] == "p" and PVal <= controls.sensors.Pressure.triggerValues[1] and controls.collecting!=0:
+                print "stopped pump collecting"
+                controls.collecting = 0
+            
+            else:
+                #print "continue as is"
+                pass
+            
+        else:
+            if controls.settings["collection_control"] == "c" and CVal >= controls.sensors.CO2.triggerValues:
+                print "collecting"
+                controls.collecting = controls.sensors.CO2.triggerValues
+            
+            elif controls.settings["collection_control"] == "p" and PVal >= controls.sensors.Pressure.triggerValues:
+                print "collecting"
+                controls.collecting = controls.sensors.Pressure.triggerValues
+            
+            else:
+                controls.collecting = 0
+        return controls
+        
 
 class CO2_sensor: #designed for things like CO2, flow or pressure etc   HOW TO MERGE THE SENSOR TYPES?????
     def __init__(self, connection, samplePeriod = 0.2):
         self.connection = connection
         self.samplePeriod = samplePeriod
         self.triggerValues = 3.2
-
+        
         self.commLink = self.initialiseConnection()
 
     def initialiseConnection(self):
@@ -120,7 +127,7 @@ class Flow_sensor: #Should be rolled into CO2_sensor and just called input senso
         self.currentTime = 0
         
         self.samplePeriod = samplePeriod
-    
+        
         self.commLink = commLink
         print "trying outside of IC:"
         self.commLink.write('F')
@@ -141,10 +148,10 @@ class Flow_sensor: #Should be rolled into CO2_sensor and just called input senso
         #print "got pressure"
         return Flow
     
-    def collectedVolume(self):
-       
-        Vol = ((self.currentFlow+self.lastFlow)/120.0)*(self.currentTime-self.lastTime)      # Flow measured in sccm/min, 120 = 2*60
-        self.totalVolume += Vol
+    def collectedVolume(self, CollectionType, collectingStatus = "selected breath"):
+        if collectingStatus == "selected breath" or collectingStatus != 0 :
+            Vol = ((self.currentFlow+self.lastFlow)/120.0)*(self.currentTime-self.lastTime)      # Flow measured in ml/min, 120 = 2*60
+            self.totalVolume += Vol
         self.lastTime = self.currentTime
         self.lastFlow = self.currentFlow
         return self.totalVolume
@@ -160,7 +167,7 @@ class Pressure_sensor: #Should be rolled into CO2_sensor and just called input s
         self.connection = connection
         self.samplePeriod = samplePeriod
         self.triggerValues = 350
-
+        
         self.commLink = self.initialiseConnection()
         print "trying outside of IC:"
         self.commLink.write('P')

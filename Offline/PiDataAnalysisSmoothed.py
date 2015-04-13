@@ -140,11 +140,13 @@ def plotData(Data):
     pressureData = []
     CO2Data = []
     flowData = []
+    collData  = []
     for d in Data:
         timeData.append(d.tS)
         pressureData.append(d.p)
         CO2Data.append(d.c)
         flowData.append(d.f)
+        collData.append(d.coll)
     
     CO2DataSmoothed = smooth(CO2Data)
     pressureDataSmoothed = smooth(pressureData)
@@ -162,6 +164,7 @@ def plotData(Data):
     axCO2.plot(timeData, CO2DataSmoothed, 'b-')
     axPressure.plot(timeData, pressureDataSmoothed, 'r-')
     axPressure.plot(timeData, flowData, 'g-')
+    axPressure.plot(timeData, collData, 'y-')
     plt.show()
 
     
