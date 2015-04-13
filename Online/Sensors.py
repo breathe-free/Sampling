@@ -20,7 +20,7 @@ class sensorList:
             FVal = self.Flow.getReading()
         timeStamp = time.time()
         
-        controls = self.selectionMatrix(controls)
+        controls = self.selectionMatrix(controls,CVal, PVal)
         
         if controls.collectionRun == True:
             #print "now at pump"
@@ -49,7 +49,7 @@ class sensorList:
         else:
             return CVal, PVal, timeStamp
     
-    def selectionMatrix(self, controls):
+    def selectionMatrix(self, controls, CVal, PVal):
         if isinstance(controls.sensors.Pressure.triggerValues, list):
             if controls.settings["collection_control"] == "c" and CVal >= controls.sensors.CO2.triggerValues[0] and controls.collecting==0:
                 print "collecting"
@@ -148,7 +148,7 @@ class Flow_sensor: #Should be rolled into CO2_sensor and just called input senso
         #print "got pressure"
         return Flow
     
-    def collectedVolume(self, CollectionType, collectingStatus = "selected breath"):
+    def collectedVolume(self, collectingStatus = "selected breath"):
         if collectingStatus == "selected breath" or collectingStatus != 0 :
             Vol = ((self.currentFlow+self.lastFlow)/120.0)*(self.currentTime-self.lastTime)      # Flow measured in ml/min, 120 = 2*60
             self.totalVolume += Vol
