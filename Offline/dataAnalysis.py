@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# Deprecated - now use PiDataAnalysisSmoothed - incorporates latest updates.
+
 from matplotlib import pyplot as plt
 import os
 import re
