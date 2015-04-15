@@ -368,6 +368,7 @@ def mainProgram(remoteControl = True):
     if not myControl.sensors.Flow.Available:
         myComms.emit_state(message="WARNING: No MFC connected", severity="warning")
     
+    #try:
     while True:
         try:
             print "waiting for response from web interface"
@@ -399,9 +400,10 @@ def mainProgram(remoteControl = True):
                     sys.exit()
                 else:
                     print "invalid arguement, please enter r or q"
-    
+    #except:
+    #    myComms.emit_state(message="ERROR: Control software has irrecoverably errored. Please restart the\ncontroller with the line 'python Controller.py'", severity="error")
 
 if __name__ == '__main__':
-    
+
     remoteControl = True
     mainProgram(remoteControl)
