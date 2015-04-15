@@ -148,10 +148,15 @@ class Flow_sensor: #Should be rolled into CO2_sensor and just called input senso
         #print "got pressure"
         return Flow
     
-    def collectedVolume(self, collectingStatus = "selected breath"):
-        if collectingStatus == "selected breath" or collectingStatus != 0 :
+    def collectedVolume(self, totalBreath, collecting):
+        #if collectingStatus == "selected breath" or collectingStatus != 0:
+        if totalBreath == True and collecting != 0:    
             Vol = ((self.currentFlow+self.lastFlow)/120.0)*(self.currentTime-self.lastTime)      # Flow measured in ml/min, 120 = 2*60
             self.totalVolume += Vol
+        elif totalBreath == False:
+            Vol = ((self.currentFlow+self.lastFlow)/120.0)*(self.currentTime-self.lastTime)      # Flow measured in ml/min, 120 = 2*60
+            self.totalVolume += Vol
+
         self.lastTime = self.currentTime
         self.lastFlow = self.currentFlow
         return self.totalVolume

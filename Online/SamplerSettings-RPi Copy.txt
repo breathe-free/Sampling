@@ -8,5 +8,5 @@ CO2 Trigger Limit = 2
 Pressure trigger Limit = 500
 Pump Voltage = 24
 Initialisation Time = 30
-Pump on percentage = 60
+Pump on percentage = 50
 Pump off percentage = 40
