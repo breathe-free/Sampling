@@ -95,11 +95,14 @@ class Control:
         self.CO2DrawThrough = False      #Run the pump constantly to draw air through the CO2 sensor?
         self.displayGraphLocal = False  #Plots the graph in a matplotlib animation locally
         self.displayGraphRemote = True  #Writes CO2, Pressure and other data to a socket that can be picked up by
-        self.totalBreath = True #Pump runs constantly, however measures the same volume of breath as a selected breath would
+        self.totalBreath = False #Pump runs constantly, however measures the same volume of breath as a selected breath would
                                 #"collect". If you want a fixed volume of air leave this false and set CO2DrawThrough = True.
                                             # Richard's web interface
         if self.totalBreath == True:
             self.collectionRun = False  #This feels messy - but works for now.
+        if self.CO2DrawThrough == True:
+            self.collectionRun = False  #This feels messy - but works for now.
+            
         
     def close(self):
         self.sensors.CO2.commLink.close()
@@ -195,7 +198,7 @@ class Control:
         if self.MFC:
             print "MFC is True"
             self.sensors.Flow.reset(self.timeStart)
-            while time.time()-self.timeStart <= testLength and self.sensors.Flow.collectedVolume(self.collecting) < self.settings["collection_limit"]:
+            while time.time()-self.timeStart <= testLength and self.sensors.Flow.collectedVolume(self.totalBreath, self.collecting) < self.settings["collection_limit"]:
                 CO2, Pressure, Flow, timeStamp = self.sensors.getReadings(self)
                 counter = counter + 1
                 commands = remoteComms.checkCommands(self)
@@ -208,7 +211,7 @@ class Control:
             
             tt = (time.time()-self.timeStart)
             print "Total test time was: %f" % tt
-            vv = self.sensors.Flow.collectedVolume()
+            vv = self.sensors.Flow.collectedVolume(self.totalBreath, self.collecting)
             print "Total test collection volume was: %f" % vv
             print "so which one stopped it: %f, %f" %(testLength, self.settings["collection_limit"])
         else:
