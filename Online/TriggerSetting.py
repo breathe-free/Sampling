@@ -178,10 +178,7 @@ class TriggerCalcs:
         triggers = [CO2Triggers, PressureTriggers] # TriggerHolder(CO2Triggers, PressureTriggers)
         
         return triggers
-        
-
-
-
+    
 
 if __name__ == '__main__':
     data = getLatestData()
