@@ -22,7 +22,7 @@ class sensorList:
         
         controls = self.selectionMatrix(controls,CVal, PVal)
         
-        if controls.collectionRun == True:
+        if controls.controlPumpWithTriggers == True:
             #print "now at pump"
             if controls.collecting != 0:
                 
