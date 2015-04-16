@@ -89,8 +89,8 @@ class Control:
             #print self.CO2Address
             #print "trying to make sensor List"
             self.sensors = Sensors.sensorList(self.CO2Address, self.PressureAddress, self.MFC)
-            self.sensors.CO2.triggerValues = [float(self.settings["default_trigger_co2"]), float(self.settings["default_trigger_co2"])]
-            self.sensors.Pressure.triggerValues = [int(self.settings["default_trigger_pressure"]), int(self.settings["default_trigger_pressure"])]
+            self.sensors.CO2.triggerValues = [2.0,2.0]
+            self.sensors.Pressure.triggerValues = [500,500]
             self.pumpVoltage = int(setList[8])
             self.pumpOnPercentage = float(setList[10])
             self.pumpOffPercentage = float(setList[11])
@@ -117,7 +117,7 @@ class Control:
     
     def Runner(self, remoteComms):
 
-        #self.sock = remoteComms.sock
+        self.sock = remoteComms.sock
         if self.settings["total_breath"]:
             self.controlPumpWithTriggers = False
         if self.settings["blank_capture"]:
@@ -130,7 +130,7 @@ class Control:
         #print "time start is: %s" % self.timeStart
         
         dataStore = os.path.join(os.path.dirname(__file__), "..", "datafiles")
-        setupFileName = dataStore+str(int(FileTime))+self.settings["filename"]+"CalibrationData.txt"
+        setupFileName = dataStore+"/"+str(int(FileTime))+self.settings["filename"]+"CalibrationData.txt"
         self.dataFile = open(setupFileName, 'w')
         #json.dump(self.settings, self.dataFile)
         #self.dataFile.write("\n Calibrating Data Starts Here \n")
@@ -163,13 +163,13 @@ class Control:
             print "CO2 Trigger Val is: %f" % TriggerVals[0]
             print "Pressure Trigger Val is: %f" % TriggerVals[1]
         
-        settingFileName = dataStore+str(int(FileTime))+self.settings["filename"]+"RunSettings.txt"
+        settingFileName = dataStore+"/"+str(int(FileTime))+self.settings["filename"]+"RunSettings.txt"
         self.settingFile = open(settingFileName, 'w')
         json.dump(self.settings, self.settingFile)
         json.dump(TriggerVals, self.settingFile)
         self.settingFile.close()
         
-        dataFileName = dataStore+str(int(FileTime))+self.settings["filename"]+"CollectionData.txt"
+        dataFileName = dataStore+"/"+str(int(FileTime))+self.settings["filename"]+"CollectionData.txt"
         self.dataFile = open(dataFileName, 'w')
         if self.CO2DrawThrough == True:
             #print "turning pump on"
@@ -319,7 +319,7 @@ class Communications:
             "volume":  min(100, by_volume),
             "time":    min(100, by_time),
         }
-        self.emit(
+        self.emit_state(
             collection_completion = self.collection_completion,
         )
     
