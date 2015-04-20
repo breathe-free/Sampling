@@ -42,6 +42,15 @@ DEFAULT_SETTINGS = {
     }
 }
 
+LOCAL_SETTINGS = {
+    "CO2_address":          "/dev/ttyUSB0",     #needs checking
+    "pressure_address":     "/dev/ttyACM0",       #needs checking
+    "pump_address":         "/dev/ttyUSB1",     #needs checking
+    "poll_rate":            5,
+    "default_pump_voltage": 24,
+    
+}
+
 class Control:
     #code
     def __init__(self):
@@ -51,83 +60,73 @@ class Control:
         else:
             setFile = open(r"SamplerSettings-Windows.txt", 'r')
         
-        allSettings = setFile.read()
-        allSettings = allSettings.strip()
-        allSettings = allSettings.split("\n")
+        all_settings = setFile.read()
+        all_settings = all_settings.strip()
+        all_settings = all_settings.split("\n")
         setFile.close()
-        setList = []
-        for i, setting in enumerate(allSettings):
+        set_list = []
+        for i, setting in enumerate(all_settings):
             setting = setting.strip()
-            #setting.strip("\r")
-            #setting.strip("\n")
-            #setting.strip("\r")
-            #setting.strip("")
             setting = setting.split(" = ")
             for s in setting:
                 s.strip() 
-            setList.append(setting[1])
-        
-        #print "CO2 address is: %s" % setList[0]
-        #print "PressureAddress: %s" % setList[1]
-        #print "PumpAddress: %s" % setList[2]
-        #print "testLength: %d" % int(setList[3])
-        #print "secDivision: %d" % int(setList[4])
-        #print "controlSelection: %s" % setList[5]
+            set_list.append(setting[1])
         
         self.MFC = True     # Flag if whether MFC is attached or not
-        self.volumeCollectionLimit = 50
+        self.volume_collection_limit = 50
         self.settings = DEFAULT_SETTINGS
+        self.local_settings = LOCAL_SETTINGS
         
         print "getting settings"
         try:
-            self.CO2Address = setList[0]
-            self.PressureAddress = setList[1]
-            self.PumpAddress = setList[2]
-            #self.testLength = int(setList[3])
-            self.secDivision = int(setList[4])
-            #self.controlSelection = setList[5]
+            self.CO2Address = set_list[0]
+            self.pressureAddress = set_list[1]
+            self.PumpAddress = set_list[2]
+            #self.test_length = int(set_list[3])
+            self.secDivision = int(set_list[4])
+            #self.controlSelection = set_list[5]
             #print self.CO2Address
             #print "trying to make sensor List"
-            self.sensors = Sensors.sensorList(self.CO2Address, self.PressureAddress, self.MFC)
-            self.sensors.CO2.triggerValues = [2.0,2.0]
-            self.sensors.Pressure.triggerValues = [500,500]
-            self.pumpVoltage = int(setList[8])
-            self.pumpOnPercentage = float(setList[10])
-            self.pumpOffPercentage = float(setList[11])
+            self.sensors = Sensors.sensorList(LOCAL_SETTINGS["CO2_address"], LOCAL_SETTINGS["pressure_address"], self.MFC)
+            self.sensors.CO2.trigger_values = [2.0,2.0]
+            self.sensors.pressure.trigger_values = [500,500]
+            self.pumpVoltage = int(set_list[8])
+            self.pump_on_percentage = float(set_list[10])
+            self.pump_off_percentage = float(set_list[11])
             print "got all settings"
         except:
             print "ran out of settings early"
         
         print "finished in settings"
         
-        self.myPump = Pumps.output_controller(self.PumpAddress, self.pumpVoltage) #, voltage = self.pumpVoltage)
+        self.sample_pump = Pumps.output_controller(LOCAL_SETTINGS["pump_address"], LOCAL_SETTINGS["default_pump_voltage"]) #, voltage = self.pumpVoltage)
         self.logging = True            #save CO2, Pressure and other data to txt file?
-        self.controlPumpWithTriggers = True      #Run the sample collection pump when the gating algorithm returns True?
-        self.CO2DrawThrough = False      #Run the pump constantly to draw air through the CO2 sensor?
-        self.displayGraphLocal = False  #Plots the graph in a matplotlib animation locally
-        self.displayGraphRemote = True  #Writes CO2, Pressure and other data to a socket that can be picked up by
+        self.control_pump_with_triggers = True      #Run the sample collection pump when the gating algorithm returns True?
+        self.CO2_draw_through = False      #Run the pump constantly to draw air through the CO2 sensor?
+        self.display_graph_local = False  #Plots the graph in a matplotlib animation locally
+        self.display_graph_remote = True  #Writes CO2, Pressure and other data to a socket that can be picked up by
         #self.totalBreath = False #Pump runs constantly, however measures the same volume of breath as a selected breath would
-                                #"collect". If you want a fixed volume of air leave this false and set CO2DrawThrough = True.
+                                #"collect". If you want a fixed volume of air leave this false and set CO2_draw_through = True.
                                             # Richard's web interface
         
     def close(self):
-        self.sensors.CO2.commLink.close()
-        self.sensors.Pressure.commLink.close()
-        self.myPump.commLink.close()
+        self.sensors.CO2.comm_link.close()
+        self.sensors.pressure.comm_link.close()
+        self.sample_pump.comm_link.close()
     
-    def Runner(self, remoteComms):
+    def Runner(self, remote_comms):
 
-        self.sock = remoteComms.sock
+        self.sock = remote_comms.sock
         if self.settings["total_breath"]:
-            self.controlPumpWithTriggers = False
+            self.control_pump_with_triggers = False
         if self.settings["blank_capture"]:
-            self.controlPumpWithTriggers = False
-        
-        self.timeStart = time.time()
-        FileTime = self.timeStart
-        timeS = [self.timeStart]
+            self.control_pump_with_triggers = False
+        self.sample_pump.frequency_sweep()
+        self.time_start = time.time()
+        FileTime = self.time_start
+        timeS = [self.time_start]
         self.collecting = 0
-        #print "time start is: %s" % self.timeStart
+        #print "time start is: %s" % self.time_start
         
         dataStore = os.path.join(os.path.dirname(__file__), "..", "datafiles")
         setupFileName = dataStore+"/"+str(int(FileTime))+self.settings["filename"]+"CalibrationData.txt"
@@ -137,103 +136,103 @@ class Control:
         
         #Set up sampler settings and get breathing pattern:
         print "Now collecting for trigger calculation"
-        statusHolder = self.controlPumpWithTriggers       # ensure the pump doesn't run during this phase and collect the wrong sample
-        self.controlPumpWithTriggers = False
+        statusHolder = self.control_pump_with_triggers       # ensure the pump doesn't run during this phase and collect the wrong sample
+        self.control_pump_with_triggers = False
 
-        remoteComms.change_state(remoteComms.STATES.CALIBRATING)
-        self.localLoop(self.settings["calibration_time"], remoteComms)    #callibration time, 30sec should allow 5 breaths, a good average
+        remote_comms.change_state(remote_comms.STATES.CALIBRATING)
+        self.localLoop(self.settings["calibration_time"], remote_comms)    #callibration time, 30sec should allow 5 breaths, a good average
         self.dataFile.close()
-        self.controlPumpWithTriggers = statusHolder       #turn pump back on to previous settings
-        remoteComms.change_state(remoteComms.STATES.ANALYSING)
-        triggerCal = TriggerSetting.TriggerCalcs()
-        TriggerVals = triggerCal.calculate(setupFileName, self.settings["capture_window"]["start"]["percent"], self.settings["capture_window"]["end"]["percent"])
-        self.sensors.CO2.triggerValues = TriggerVals[0]
-        self.sensors.Pressure.triggerValues = TriggerVals[1]
-        print type(TriggerVals)
+        self.control_pump_with_triggers = statusHolder       #turn pump back on to previous settings
+        remote_comms.change_state(remote_comms.STATES.ANALYSING)
+        trigger_cal = TriggerSetting.TriggerCalcs()
+        all_trigger_vals = trigger_cal.calculate(setupFileName, self.settings["capture_window"]["start"]["percent"], self.settings["capture_window"]["end"]["percent"])
+        self.sensors.CO2.trigger_values = all_trigger_vals[0]
+        self.sensors.pressure.trigger_values = all_trigger_vals[1]
+        print type(all_trigger_vals)
         #self.dataFile.write("\n Trigger values for this collection run are: \n")
-        if isinstance(TriggerVals[0], list):
+        if isinstance(all_trigger_vals[0], list):
             print "*******************************************"
             for iii in range(2):
                 print iii
-                print "CO2 Trigger Val is: %f" % TriggerVals[iii][0]
-                print "Pressure Trigger Val is: %f" % TriggerVals[iii][1]
+                print "CO2 Trigger Val is: %f" % all_trigger_vals[iii][0]
+                print "Pressure Trigger Val is: %f" % all_trigger_vals[iii][1]
                 
         else:
             print"##############################################"
-            print "CO2 Trigger Val is: %f" % TriggerVals[0]
-            print "Pressure Trigger Val is: %f" % TriggerVals[1]
+            print "CO2 Trigger Val is: %f" % all_trigger_vals[0]
+            print "Pressure Trigger Val is: %f" % all_trigger_vals[1]
         
         settingFileName = dataStore+"/"+str(int(FileTime))+self.settings["filename"]+"RunSettings.txt"
         self.settingFile = open(settingFileName, 'w')
         json.dump(self.settings, self.settingFile)
-        json.dump(TriggerVals, self.settingFile)
+        json.dump(all_trigger_vals, self.settingFile)
         self.settingFile.close()
         
         dataFileName = dataStore+"/"+str(int(FileTime))+self.settings["filename"]+"CollectionData.txt"
         self.dataFile = open(dataFileName, 'w')
-        if self.CO2DrawThrough == True:
+        if self.CO2_draw_through == True:
             #print "turning pump on"
-            self.myPump.turnOnOff(1)
+            self.sample_pump.power_switch("on")
             time.sleep(1)
         if self.settings["total_breath"]:
-            self.myPump.turnOnOff(1)
+            self.sample_pump.power_switch("on")
         if self.settings["blank_capture"]:
-            self.myPump.turnOnOff(1)
+            self.sample_pump.power_switch("on")
             
         print "measurement loop"
         self.dataFile.write("\n Collection Data Starts Here \n")
-        remoteComms.change_state(remoteComms.STATES.COLLECTING)
-        if self.displayGraphLocal == True:
+        remote_comms.change_state(remote_comms.STATES.COLLECTING)
+        if self.display_graph_local == True:
             self.Grapher = RTP.graphing()
             self.Grapher.runGraphingLoop(self)
-        elif self.displayGraphLocal == False:
-            self.localLoop(self.settings["sample_collection_time"], remoteComms)
+        elif self.display_graph_local == False:
+            self.localLoop(self.settings["sample_collection_time"], remote_comms)
             
         print "finished collecting"
-        self.myPump.turnOnOff(0)
+        self.sample_pump.power_switch("off")
         self.dataFile.close()
-        remoteComms.change_state(remoteComms.STATES.WAITING)
+        remote_comms.change_state(remote_comms.STATES.WAITING)
         print "done!!!"
         
-    def localLoop(self, testLength, remoteComms):
-        self.timeStart = time.time()
+    def localLoop(self, test_length, remote_comms):
+        self.time_start = time.time()
         counter = 0
         self.collectionLimitReached = False
         
-        #while time.time()-self.timeStart <= testLength and not self.collectionLimitReached:
+        #while time.time()-self.time_start <= test_length and not self.collectionLimitReached:
         if self.MFC:
             print "MFC is True"
-            self.sensors.Flow.reset(self.timeStart)
-            currentVolume = 0
-            timeStamp = self.timeStart
-            while timeStamp-self.timeStart <= testLength and currentVolume < self.settings["collection_limit"]:
-                CO2, Pressure, Flow, timeStamp = self.sensors.getReadings(self)
-                currentVolume = self.sensors.Flow.collectedVolume(self.settings["total_breath"], self.collecting)
+            self.sensors.Flow.reset(self.time_start)
+            current_volume = 0
+            time_stamp = self.time_start
+            while time_stamp-self.time_start <= test_length and current_volume < self.settings["collection_limit"]:
+                CO2, Pressure, Flow, time_stamp = self.sensors.getReadings(self)
+                current_volume = self.sensors.Flow.collectedVolume(self.settings["total_breath"], self.collecting)
                 counter = counter + 1
                 if counter%5.0 == 0:
-                    remoteComms.set_completion(testLength, self.settings["collection_limit"], self.timeStart, timeStamp, currentVolume)
-                commands = remoteComms.checkCommands(self)
+                    remote_comms.set_completion(test_length, self.settings["collection_limit"], self.time_start, time_stamp, current_volume)
+                commands = remote_comms.checkCommands(self)
                 if commands is not None and commands.find("stopsampling") >= 0:
                     break
-                TS = float(counter)/self.secDivision - (time.time()-self.timeStart)
+                TS = float(counter)/self.secDivision - (time.time()-self.time_start)
                 if TS < 0:
                     TS = 0
                 time.sleep(TS)
             
-            tt = (time.time()-self.timeStart)
+            tt = (time.time()-self.time_start)
             print "Total test time was: %f" % tt
             vv = self.sensors.Flow.collectedVolume(self.settings["total_breath"], self.collecting)
             print "Total test collection volume was: %f" % vv
-            print "so which one stopped it: %f, %f" %(testLength, self.settings["collection_limit"])
+            print "so which one stopped it: %f, %f" %(test_length, self.settings["collection_limit"])
         else:
             print "MFC is False"
-            while time.time()-self.timeStart <= testLength:
-                CO2, Pressure, timeStamp = self.sensors.getReadings(self)
+            while time.time()-self.time_start <= test_length:
+                CO2, Pressure, time_stamp = self.sensors.getReadings(self)
                 counter = counter + 1
-                commands = remoteComms.checkCommands(self)
+                commands = remote_comms.checkCommands(self)
                 if commands is not None and commands.find("stopsampling") >= 0:
                     break
-                TS = float(counter)/self.secDivision - (time.time()-self.timeStart)
+                TS = float(counter)/self.secDivision - (time.time()-self.time_start)
                 if TS < 0:
                     TS = 0
                 time.sleep(TS)
@@ -313,8 +312,8 @@ class Communications:
     def enum(self, **enums):
         return type('Enum', (), enums)
     
-    def set_completion(self, timeLimit, volumeLimit, startTime, currentTime, currentVolume):
-        by_time, by_volume = self.support.calculateCurrentCompletion(timeLimit, volumeLimit, startTime, currentTime, currentVolume)
+    def set_completion(self, time_limit, volume_limit, start_time, current_time, current_volume):
+        by_time, by_volume = self.support.calculateCurrentCompletion(time_limit, volume_limit, start_time, current_time, current_volume)
         self.collection_completion = {
             "volume":  min(100, by_volume),
             "time":    min(100, by_time),
@@ -351,13 +350,13 @@ class Communications:
                 self.emit_state(settings=controls.settings)
             
             elif do_what == "apply_settings_default":
-                controls.settings = self.support.loadSettings("default")
+                controls.settings = self.support.load_settings("default")
                 self.emit_state(settings=controls.settings, message="Loaded default settings.", severity="info")
             
             elif do_what == "apply_settings_user":
-                controls.settings = self.support.loadSettings("user")
+                controls.settings = self.support.load_settings("user")
                 if controls.settings == -1:
-                    controls.settings = self.support.loadSettings("default")
+                    controls.settings = self.support.load_settings("default")
                     self.emit_state(settings=controls.settings, message="WARNING: User settings not available, have loaded default settings instead.", severity="warning")
                 else:
                     self.emit_state(settings=controls.settings, message="Loaded user settings.", severity="info")
@@ -374,7 +373,7 @@ class Support_Functions:
         with open("UserDefinedSettings.txt", "w") as outfile:
             json.dump(settings, outfile)            #save to user settings file (overwrite)
     
-    def loadSettings(self, source):
+    def load_settings(self, source):
         if source == "user":
             try:
                 with open("UserDefinedSettings.txt", "r") as infile:
@@ -388,26 +387,26 @@ class Support_Functions:
         else:
             return DEFAULT_SETTINGS
     
-    def calculateCurrentCompletion(self, timeLimit, volumeLimit, startTime, currentTime, currentVolume):
-        timePercentage = ((currentTime-startTime)*100)/timeLimit
-        volumePercentage = (currentVolume*100)/volumeLimit
+    def calculateCurrentCompletion(self, time_limit, volume_limit, start_time, current_time, current_volume):
+        timePercentage = ((current_time-start_time)*100)/time_limit
+        volumePercentage = (current_volume*100)/volume_limit
         return timePercentage, volumePercentage
 
 
 def mainProgram(remoteControl = True):
-    myControl = Control()
-    myComms = Communications(myControl)
-    if not myControl.sensors.Flow.Available:
-        myComms.emit_state(message="WARNING: No MFC connected", severity="warning")
+    sampler_control = Control()
+    sampler_comms = Communications(sampler_control)
+    if not sampler_control.sensors.Flow.Available:
+        sampler_comms.emit_state(message="WARNING: No MFC connected", severity="warning")
     
     #try:
     while True:
         try:
             print "waiting for response from web interface"
-            myComms.change_state(myComms.STATES.WAITING)
+            sampler_comms.change_state(sampler_comms.STATES.WAITING)
             while remoteControl:
-                #myComms loop until got a start command
-                commString = myComms.checkCommands(myControl)
+                #sampler_comms loop until got a start command
+                commString = sampler_comms.checkCommands(sampler_control)
                 if commString is not None and commString.find("startsampling") >= 0:
                     print "Heard something"
                     break
@@ -415,11 +414,11 @@ def mainProgram(remoteControl = True):
         except KeyboardInterrupt:
             #print "Keyboard used to interrupt - do I need to close something here?"
             
-            myControl.close()
-            myComms.close()
+            sampler_control.close()
+            sampler_comms.close()
             sys.exit()
     
-        myControl.Runner(myComms)
+        sampler_control.Runner(sampler_comms)
         if not remoteControl:
             noInput = True
             while noInput == True:
@@ -427,13 +426,13 @@ def mainProgram(remoteControl = True):
                 if userInput == 'r':
                     noInput = False
                 elif userInput == 'q':
-                    myControl.close()
-                    myComms.close()
+                    sampler_control.close()
+                    sampler_comms.close()
                     sys.exit()
                 else:
                     print "invalid arguement, please enter r or q"
     #except:
-    #    myComms.emit_state(message="ERROR: Control software has irrecoverably errored. Please restart the\ncontroller with the line 'python Controller.py'", severity="error")
+    #    sampler_comms.emit_state(message="ERROR: Control software has irrecoverably errored. Please restart the\ncontroller with the line 'python Controller.py'", severity="error")
 
 if __name__ == '__main__':
 

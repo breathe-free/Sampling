@@ -15,8 +15,14 @@ This includes a number of tools for the purpose of post-analysis of the data. Th
 an offline gating tool for experimenting with different gate settings and in time more will be added.
 
 ## Requirements:
-* Raspbian, Ubuntu or Windows.
+* Tested on Raspbian, Ubuntu and Windows.
 * Python 2.7
 * Matplotlib
 * PySerial
-* Something that can read from a uni socket (try breathe-see, complimentary visualiser).
+* Something that can read from a unix socket (try breathe-see, complimentary visualiser/controller).
+
+## To do:
+* Include second pump drive funcitionality.
+* Implement the more complex capture window functionality.
+* Ensure frequency sweep occurs when the sorbent tube is guaranteed to be attached - I think this is why we see low flow rates at the moment (happening before tube attached).
+* Analyse delay between CO2 con. and pressure peaks/troughs.

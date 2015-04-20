@@ -6,64 +6,64 @@ import time
 class sensorList:
     def __init__(self, CO2Ad, PressureAd, MFC):
         self.CO2 = CO2_sensor(CO2Ad)
-        self.Pressure = Pressure_sensor(PressureAd)
+        self.pressure = Pressure_sensor(PressureAd)
         self.MFC = MFC
         if self.MFC:
-            self.Flow = Flow_sensor(self.Pressure.commLink)
+            self.Flow = Flow_sensor(self.pressure.comm_link)
   
     def getReadings(self, controls):
-        PVal = self.Pressure.getReading()
+        PVal = self.pressure.getReading()
         #print "got pressure"
         CVal = self.CO2.getReading()
         #print "got CO2"
         if self.MFC:
             FVal = self.Flow.getReading()
-        timeStamp = time.time()
+        time_stamp = time.time()
         
         controls = self.selectionMatrix(controls,CVal, PVal)
         
-        if controls.controlPumpWithTriggers == True:
+        if controls.control_pump_with_triggers == True:
             #print "now at pump"
             if controls.collecting != 0:
                 
-                controls.myPump.turnOnOff(1)
+                controls.sample_pump.power_switch("on")
             else:
-                controls.myPump.turnOnOff(0)
+                controls.sample_pump.power_switch("off")
         
         if self.MFC:
             self.Flow.currentFlow = FVal
-            self.Flow.currentTime = timeStamp
-            dataString = "%s, %s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(FVal), str(controls.collecting))
+            self.Flow.current_time = time_stamp
+            dataString = "%s, %s, %s, %s, %s\n" % (str(time_stamp), str(PVal), str(CVal), str(FVal), str(controls.collecting))
         else:
-            dataString = "%s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(controls.collecting))
+            dataString = "%s, %s, %s, %s\n" % (str(time_stamp), str(PVal), str(CVal), str(controls.collecting))
         if controls.logging == True:
             #print "writing file"
             #print dataString
             controls.dataFile.write(dataString)
             
-        if controls.displayGraphRemote == True:
-            dataSendString = "%s, %s, %s, %s\n" % (str(timeStamp), str(PVal), str(CVal), str(controls.collecting))
+        if controls.display_graph_remote == True:
+            dataSendString = "%s, %s, %s, %s\n" % (str(time_stamp), str(PVal), str(CVal), str(controls.collecting))
             controls.sock.sendall(dataSendString)
         if self.MFC:
-            return CVal, PVal, FVal, timeStamp
+            return CVal, PVal, FVal, time_stamp
         else:
-            return CVal, PVal, timeStamp
+            return CVal, PVal, time_stamp
     
     def selectionMatrix(self, controls, CVal, PVal):
-        if isinstance(controls.sensors.Pressure.triggerValues, list):
-            if controls.settings["collection_control"] == "c" and CVal >= controls.sensors.CO2.triggerValues[0] and controls.collecting==0:
+        if isinstance(controls.sensors.pressure.trigger_values, list):
+            if controls.settings["collection_control"] == "c" and CVal >= controls.sensors.CO2.trigger_values[0] and controls.collecting==0:
                 print "collecting"
-                controls.collecting = controls.sensors.CO2.triggerValues[0]
+                controls.collecting = controls.sensors.CO2.trigger_values[0]
             
-            elif controls.settings["collection_control"] == "c" and CVal <= controls.sensors.CO2.triggerValues[1] and controls.collecting!=0:
+            elif controls.settings["collection_control"] == "c" and CVal <= controls.sensors.CO2.trigger_values[1] and controls.collecting!=0:
                 print "stopped collecting"
                 controls.collecting = 0
             
-            elif controls.settings["collection_control"] == "p" and PVal >= controls.sensors.Pressure.triggerValues[0] and controls.collecting==0:
+            elif controls.settings["collection_control"] == "p" and PVal >= controls.sensors.pressure.trigger_values[0] and controls.collecting==0:
                 print "Started pump collecting"
-                controls.collecting = controls.sensors.Pressure.triggerValues[0]
+                controls.collecting = controls.sensors.pressure.trigger_values[0]
             
-            elif controls.settings["collection_control"] == "p" and PVal <= controls.sensors.Pressure.triggerValues[1] and controls.collecting!=0:
+            elif controls.settings["collection_control"] == "p" and PVal <= controls.sensors.pressure.trigger_values[1] and controls.collecting!=0:
                 print "stopped pump collecting"
                 controls.collecting = 0
             
@@ -72,13 +72,13 @@ class sensorList:
                 pass
             
         else:
-            if controls.settings["collection_control"] == "c" and CVal >= controls.sensors.CO2.triggerValues:
+            if controls.settings["collection_control"] == "c" and CVal >= controls.sensors.CO2.trigger_values:
                 print "collecting"
-                controls.collecting = controls.sensors.CO2.triggerValues
+                controls.collecting = controls.sensors.CO2.trigger_values
             
-            elif controls.settings["collection_control"] == "p" and PVal >= controls.sensors.Pressure.triggerValues:
+            elif controls.settings["collection_control"] == "p" and PVal >= controls.sensors.pressure.trigger_values:
                 print "collecting"
-                controls.collecting = controls.sensors.Pressure.triggerValues
+                controls.collecting = controls.sensors.pressure.trigger_values
             
             else:
                 controls.collecting = 0
@@ -89,11 +89,11 @@ class CO2_sensor: #designed for things like CO2, flow or pressure etc   HOW TO M
     def __init__(self, connection, samplePeriod = 0.2):
         self.connection = connection
         self.samplePeriod = samplePeriod
-        self.triggerValues = 3.2
+        self.trigger_values = 3.2
         
-        self.commLink = self.initialiseConnection()
+        self.comm_link = self.initialise_connection()
 
-    def initialiseConnection(self):
+    def initialise_connection(self):
         print r"%s" % self.connection
         conn = Serial(self.connection, writeTimeout = 3)    #9600 baud
         #conn = Serial("/dev/ttyUSB0", writeTimeout = 3)    #9600 baud
@@ -109,8 +109,8 @@ class CO2_sensor: #designed for things like CO2, flow or pressure etc   HOW TO M
         return conn
 
     def getReading(self):
-        self.commLink.write('z\r\n')
-        readString = self.commLink.readline()
+        self.comm_link.write('z\r\n')
+        readString = self.comm_link.readline()
         readString = readString.strip()
         readString = readString.split()
         pp105 = float(readString[1]) # ppm/10! - not ppm
@@ -118,20 +118,20 @@ class CO2_sensor: #designed for things like CO2, flow or pressure etc   HOW TO M
         return CO2percent
 
 class Flow_sensor: #Should be rolled into CO2_sensor and just called input sensor
-    def __init__(self, commLink, samplePeriod = 0.2):       # Feed in the commlink from Pressure sensor - uses the same board
+    def __init__(self, comm_link, samplePeriod = 0.2):       # Feed in the commlink from Pressure sensor - uses the same board
         
         self.totalVolume = 0    # sccm
         self.lastFlow = 0
         self.lastTime = 0
         self.currentFlow = 0
-        self.currentTime = 0
+        self.current_time = 0
         
         self.samplePeriod = samplePeriod
         
-        self.commLink = commLink
+        self.comm_link = comm_link
         print "trying outside of IC:"
-        self.commLink.write('F')
-        check = self.commLink.readline()
+        self.comm_link.write('F')
+        check = self.comm_link.readline()
         print check
         if check == -1:
             print "no MFC detected - cannot get value"
@@ -142,28 +142,28 @@ class Flow_sensor: #Should be rolled into CO2_sensor and just called input senso
     def getReading(self):
         if self.Available == False:
             return -1
-        self.commLink.write('F')
+        self.comm_link.write('F')
         #print "written r to Arduino"
-        Flow = float(self.commLink.readline() )
+        Flow = float(self.comm_link.readline() )
         #print "got pressure"
         return Flow
     
     def collectedVolume(self, totalBreath, collecting):
         #if collectingStatus == "selected breath" or collectingStatus != 0:
         if totalBreath == True and collecting != 0:    
-            Vol = ((self.currentFlow+self.lastFlow)/120.0)*(self.currentTime-self.lastTime)      # Flow measured in ml/min, 120 = 2*60
+            Vol = ((self.currentFlow+self.lastFlow)/120.0)*(self.current_time-self.lastTime)      # Flow measured in ml/min, 120 = 2*60
             self.totalVolume += Vol
         elif totalBreath == False:
-            Vol = ((self.currentFlow+self.lastFlow)/120.0)*(self.currentTime-self.lastTime)      # Flow measured in ml/min, 120 = 2*60
+            Vol = ((self.currentFlow+self.lastFlow)/120.0)*(self.current_time-self.lastTime)      # Flow measured in ml/min, 120 = 2*60
             self.totalVolume += Vol
 
-        self.lastTime = self.currentTime
+        self.lastTime = self.current_time
         self.lastFlow = self.currentFlow
         return self.totalVolume
     
-    def reset(self, startTime):
-        self.lastTime = startTime
-        self.currentTime = startTime
+    def reset(self, start_time):
+        self.lastTime = start_time
+        self.current_time = start_time
         self.lastFlow = 0
         self.totalVolume = 0
 
@@ -171,14 +171,14 @@ class Pressure_sensor: #Should be rolled into CO2_sensor and just called input s
     def __init__(self, connection, samplePeriod = 0.2):
         self.connection = connection
         self.samplePeriod = samplePeriod
-        self.triggerValues = 350
+        self.trigger_values = 350
         
-        self.commLink = self.initialiseConnection()
+        self.comm_link = self.initialise_connection()
         print "trying outside of IC:"
-        self.commLink.write('P')
-        print self.commLink.readline()
+        self.comm_link.write('P')
+        print self.comm_link.readline()
 
-    def initialiseConnection(self):
+    def initialise_connection(self):
         print "starting Pressure connection"
         conn = Serial(self.connection, 9600, timeout = 3)
         time.sleep(1)
@@ -188,8 +188,8 @@ class Pressure_sensor: #Should be rolled into CO2_sensor and just called input s
         return conn
 
     def getReading(self):
-        self.commLink.write('P')
+        self.comm_link.write('P')
         #print "written r to Arduino"
-        pressure = float( self.commLink.readline() )
+        pressure = float( self.comm_link.readline() )
         #print "got pressure"
         return pressure

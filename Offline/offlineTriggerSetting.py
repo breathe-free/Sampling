@@ -129,9 +129,9 @@ def getLatestData():
 
     newestStamp = 0
     for fileName in fList:
-        timeStamp = float(fileName.strip(r".txt"))
-        if timeStamp > newestStamp:
-            newestStamp = timeStamp
+        time_stamp = float(fileName.strip(r".txt"))
+        if time_stamp > newestStamp:
+            newestStamp = time_stamp
     
     dataFile = open(fileLoc + '\\' + str(int(newestStamp)) + ".txt")
     allData = dataFile.read()
@@ -152,11 +152,11 @@ def getLatestData():
             #print DG2
             
             if firstPoint == True:
-                startTime = float(DG2[0])
+                start_time = float(DG2[0])
                 firstPoint = False
-            if float(DG2[0]) - startTime > 50:
+            if float(DG2[0]) - start_time > 50:
                 break
-            indData.append(dP(float(DG2[0])- startTime, float(DG2[1]), float(DG2[2]), bool(DG2[3])))
+            indData.append(dP(float(DG2[0])- start_time, float(DG2[1]), float(DG2[2]), bool(DG2[3])))
     
     return indData
 

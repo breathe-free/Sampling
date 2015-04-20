@@ -18,9 +18,9 @@ class graphing:
     def __init__(self):
         maxLen = 100
         self.CO2Trace = deque([0.0]*maxLen)
-        self.PressureTrace = deque([0.0]*maxLen)
+        self.pressureTrace = deque([0.0]*maxLen)
         self.maxLen = maxLen
-        self.startTime = time.time()
+        self.start_time = time.time()
 
   # add to buffer
     def addToBuf(self, buf, val):
@@ -34,20 +34,20 @@ class graphing:
     def add(self, data):
         assert(len(data) == 2)
         self.addToBuf(self.CO2Trace, data[0])
-        self.addToBuf(self.PressureTrace, data[1])
+        self.addToBuf(self.pressureTrace, data[1])
     
     def getAxisLimits(self, controls):
-        timeStart = time.time()
+        time_start = time.time()
         tempData = []
         CO2Data = []
         PressureData = []
         for i in range(10*controls.secDivision):
             print "looping for calibration: %d" % i
-            CO2, Pressure, timeStamp = controls.sensors.getReadings(controls, logging = False)
-            tempData.append([timeStamp - timeStart, CO2, Pressure])
+            CO2, Pressure, time_stamp = controls.sensors.getReadings(controls, logging = False)
+            tempData.append([time_stamp - time_start, CO2, Pressure])
             CO2Data.append(CO2)
             PressureData.append(Pressure)
-            timeToWait = ((float(i+1)/float(controls.secDivision))-(time.time() - timeStart))
+            timeToWait = ((float(i+1)/float(controls.secDivision))-(time.time() - time_start))
             if timeToWait <= 0:
                 timeToWait = 0
             time.sleep(timeToWait)
@@ -73,22 +73,22 @@ class graphing:
     def update(self, frameNum, traceCO2, tracePressure, controls):
         
 
-        if time.time() - controls.timeStart >= controls.testLength*controls.secDivision: ##exit case 1
+        if time.time() - controls.time_start >= controls.test_length*controls.secDivision: ##exit case 1
             print "exiting because of time run out"
             controls.dataFile.close()
             print "now at pump"
             controls.collecting = 0
-            controls.myPump.turnOnOff(controls.collecting)
+            controls.sample_pump.power_switch(controls.collecting)
             raise collectionTimeExpiredException()
         
         #if controls.
         
         try:
-            CO2, Pressure, timeStamp = controls.sensors.getReadings(controls)
+            CO2, Pressure, time_stamp = controls.sensors.getReadings(controls)
 
             controls.counter = controls.counter + 1
             print "counter: %d" % controls.counter
-            TS = ((controls.counter+1.0)/controls.secDivision) - (time.time()-controls.timeStart)
+            TS = ((controls.counter+1.0)/controls.secDivision) - (time.time()-controls.time_start)
             if TS <= 0:
                 TS = 0
             time.sleep(TS)
@@ -100,7 +100,7 @@ class graphing:
             if(len(data) == 2):
                 self.add(data)
                 traceCO2.set_data(range(self.maxLen), self.CO2Trace)
-                tracePressure.set_data(range(self.maxLen), self.PressureTrace)
+                tracePressure.set_data(range(self.maxLen), self.pressureTrace)
         except KeyboardInterrupt:
             controls.dataFile.close()
             print('exiting')
@@ -135,9 +135,9 @@ class graphing:
         axPressure.set_ylabel('Pressure Pa', color='r')
         tracePressure, = axPressure.plot([], [], 'r-')  # yes the commas need to be there... don't ask why.
         
-        controls.timeStart = time.time()
+        controls.time_start = time.time()
         controls.counter = 0
-        cycles = controls.testLength*controls.secDivision
+        cycles = controls.test_length*controls.secDivision
         loopTime = 1000/controls.secDivision
         
         try:
