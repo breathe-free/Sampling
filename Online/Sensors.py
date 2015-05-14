@@ -37,8 +37,6 @@ class sensorList:
         else:
             dataString = "%s, %s, %s, %s\n" % (str(time_stamp), str(PVal), str(CVal), str(controls.collecting))
         if controls.logging == True:
-            #print "writing file"
-            #print dataString
             controls.dataFile.write(dataString)
             
         if controls.display_graph_remote == True:
@@ -83,7 +81,29 @@ class sensorList:
             else:
                 controls.collecting = 0
         return controls
+
+    def updated_selection_matrix(self, controls, CVal, PVal):
+        if controls.settings["collection_control"] == "c" and CVal >= controls.sensors.CO2.trigger_values[0] and controls.collecting==0:
+            print "collecting"
+            controls.collecting = controls.sensors.CO2.trigger_values[0]
         
+        elif controls.settings["collection_control"] == "c" and CVal <= controls.sensors.CO2.trigger_values[1] and controls.collecting!=0:
+            print "stopped collecting"
+            controls.collecting = 0
+        
+        elif controls.settings["collection_control"] == "p" and PVal >= controls.sensors.pressure.trigger_values[0] and controls.collecting==0:
+            print "Started pump collecting"
+            controls.collecting = controls.sensors.pressure.trigger_values[0]
+        
+        elif controls.settings["collection_control"] == "p" and PVal <= controls.sensors.pressure.trigger_values[1] and controls.collecting!=0:
+            print "stopped pump collecting"
+            controls.collecting = 0
+        
+        else:
+            #print "continue as is"
+            pass
+        return controls
+    
 
 class CO2_sensor: #designed for things like CO2, flow or pressure etc   HOW TO MERGE THE SENSOR TYPES?????
     def __init__(self, connection, samplePeriod = 0.2):
@@ -144,7 +164,8 @@ class Flow_sensor: #Should be rolled into CO2_sensor and just called input senso
             return -1
         self.comm_link.write('F')
         #print "written r to Arduino"
-        Flow = float(self.comm_link.readline() )
+        Flow_raw = float(self.comm_link.readline() )
+        Flow = Flow_raw*0.489
         #print "got pressure"
         return Flow
     
@@ -190,6 +211,7 @@ class Pressure_sensor: #Should be rolled into CO2_sensor and just called input s
     def getReading(self):
         self.comm_link.write('P')
         #print "written r to Arduino"
-        pressure = float( self.comm_link.readline() )
+        pressure_raw = float( self.comm_link.readline() )
+        pressure = pressure_raw*6.435 - 360
         #print "got pressure"
         return pressure

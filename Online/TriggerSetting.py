@@ -106,7 +106,6 @@ class TriggerCalcs:
         
         outputGroups = []
         
-        
         for group in extremes:      # should throw away any close peaks - group is either peak or trough
             outGroup = []
             
@@ -118,7 +117,6 @@ class TriggerCalcs:
                     print "gap = %f " % gap
                     if gap > minProximity or gap < 0:
                         outGroup.append(point[0:2])
-                
                 except IndexError:
                     outGroup.append(point[0:2])     #point is [data, time, index from overall list]
                     pass
@@ -141,23 +139,17 @@ class TriggerCalcs:
         print "length of finalData is: %d" % len(finalData)
         return numpy.mean(finalData)
     
-    
     def setTriggerValues(self, Limits, onPercentage, offPercentage):
-        
         interLimitRange = Limits[0]-Limits[1] #peak - trough
         onVal = onPercentage/100.0
         offVal = offPercentage/100.0
-        
         OnTrigger = Limits[1] + interLimitRange*onVal #Currently at 50% of range... because it is an illustration
         OffTrigger = Limits[1] + interLimitRange*offVal
-        
         Triggers = [OnTrigger, OffTrigger]
-        
         return Triggers
 
     def calculate(self, fileName, onPercentage, offPercentage):
         data = self.getDataFromFile(fileName)
-        
         timeS = []
         CO2Data = []
         PressureData = []

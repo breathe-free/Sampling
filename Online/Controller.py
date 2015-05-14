@@ -21,6 +21,8 @@ import json
 #import csv     # Nice idea, not currently executed
 
 DEFAULT_SETTINGS = {
+    "tube_id":                  None
+    "sample_date_time":         None
     "calibration_time":         20,
     "sample_collection_time":   2000,
     "collection_control":       "p",
@@ -43,63 +45,38 @@ DEFAULT_SETTINGS = {
 }
 
 LOCAL_SETTINGS = {
-    "CO2_address":          "/dev/ttyUSB0",     #needs checking
-    "pressure_address":     "/dev/ttyACM0",       #needs checking
-    "pump_address":         "/dev/ttyUSB1",     #needs checking
+    "CO2_address":          "/dev/ttyUSB0",
+    "pressure_address":     "/dev/ttyACM0",
+    "pump_address":         "/dev/ttyUSB1",
     "poll_rate":            5,
     "default_pump_voltage": 24,
-    
+    "default_pressure_trigger": 500,
+    "default_CO2_trigger": 2.5,
 }
+
 
 class Control:
     #code
     def __init__(self):
-        
-        if sys.platform == "linux2":
-            setFile = open(r"SamplerSettings-RPi Copy.txt", 'r')
-        else:
-            setFile = open(r"SamplerSettings-Windows.txt", 'r')
-        
-        all_settings = setFile.read()
-        all_settings = all_settings.strip()
-        all_settings = all_settings.split("\n")
-        setFile.close()
-        set_list = []
-        for i, setting in enumerate(all_settings):
-            setting = setting.strip()
-            setting = setting.split(" = ")
-            for s in setting:
-                s.strip() 
-            set_list.append(setting[1])
-        
         self.MFC = True     # Flag if whether MFC is attached or not
         self.volume_collection_limit = 50
         self.settings = DEFAULT_SETTINGS
         self.local_settings = LOCAL_SETTINGS
+
+        self.sensors = Sensors.sensorList(LOCAL_SETTINGS["CO2_address"],
+                                          LOCAL_SETTINGS["pressure_address"],
+                                          self.MFC,
+                                          )
+        self.sensors.CO2.trigger_values = [DEFAULT_SETTINGS["default_CO2_trigger"],
+                                           DEFAULT_SETTINGS["default_CO2_trigger"]
+                                           ]
+        self.sensors.pressure.trigger_values = [DEFAULT_SETTINGS["default_pressure_trigger"],
+                                                DEFAULT_SETTINGS["default_pressure_trigger"]
+                                                ]
+        self.sample_pump = Pumps.output_controller(LOCAL_SETTINGS["pump_address"],
+                                                   LOCAL_SETTINGS["default_pump_voltage"]
+                                                   )
         
-        print "getting settings"
-        try:
-            self.CO2Address = set_list[0]
-            self.pressureAddress = set_list[1]
-            self.PumpAddress = set_list[2]
-            #self.test_length = int(set_list[3])
-            self.secDivision = int(set_list[4])
-            #self.controlSelection = set_list[5]
-            #print self.CO2Address
-            #print "trying to make sensor List"
-            self.sensors = Sensors.sensorList(LOCAL_SETTINGS["CO2_address"], LOCAL_SETTINGS["pressure_address"], self.MFC)
-            self.sensors.CO2.trigger_values = [2.0,2.0]
-            self.sensors.pressure.trigger_values = [500,500]
-            self.pumpVoltage = int(set_list[8])
-            self.pump_on_percentage = float(set_list[10])
-            self.pump_off_percentage = float(set_list[11])
-            print "got all settings"
-        except:
-            print "ran out of settings early"
-        
-        print "finished in settings"
-        
-        self.sample_pump = Pumps.output_controller(LOCAL_SETTINGS["pump_address"], LOCAL_SETTINGS["default_pump_voltage"]) #, voltage = self.pumpVoltage)
         self.logging = True            #save CO2, Pressure and other data to txt file?
         self.control_pump_with_triggers = True      #Run the sample collection pump when the gating algorithm returns True?
         self.CO2_draw_through = False      #Run the pump constantly to draw air through the CO2 sensor?
@@ -108,14 +85,13 @@ class Control:
         #self.totalBreath = False #Pump runs constantly, however measures the same volume of breath as a selected breath would
                                 #"collect". If you want a fixed volume of air leave this false and set CO2_draw_through = True.
                                             # Richard's web interface
-        
+
     def close(self):
         self.sensors.CO2.comm_link.close()
         self.sensors.pressure.comm_link.close()
         self.sample_pump.comm_link.close()
     
     def Runner(self, remote_comms):
-
         self.sock = remote_comms.sock
         if self.settings["total_breath"]:
             self.control_pump_with_triggers = False
@@ -145,7 +121,10 @@ class Control:
         self.control_pump_with_triggers = statusHolder       #turn pump back on to previous settings
         remote_comms.change_state(remote_comms.STATES.ANALYSING)
         trigger_cal = TriggerSetting.TriggerCalcs()
-        all_trigger_vals = trigger_cal.calculate(setupFileName, self.settings["capture_window"]["start"]["percent"], self.settings["capture_window"]["end"]["percent"])
+        all_trigger_vals = trigger_cal.calculate(setupFileName,
+                                                 self.settings["capture_window"]["start"]["percent"],
+                                                 self.settings["capture_window"]["end"]["percent"]
+                                                 )
         self.sensors.CO2.trigger_values = all_trigger_vals[0]
         self.sensors.pressure.trigger_values = all_trigger_vals[1]
         print type(all_trigger_vals)
@@ -210,14 +189,17 @@ class Control:
                 current_volume = self.sensors.Flow.collectedVolume(self.settings["total_breath"], self.collecting)
                 counter = counter + 1
                 if counter%5.0 == 0:
-                    remote_comms.set_completion(test_length, self.settings["collection_limit"], self.time_start, time_stamp, current_volume)
+                    remote_comms.set_completion(test_length, self.settings["collection_limit"],
+                                                self.time_start, time_stamp,
+                                                current_volume
+                                                )
                 commands = remote_comms.checkCommands(self)
                 if commands is not None and commands.find("stopsampling") >= 0:
                     break
-                TS = float(counter)/self.secDivision - (time.time()-self.time_start)
-                if TS < 0:
-                    TS = 0
-                time.sleep(TS)
+                ts = float(counter)/LOCAL_SETTINGS["poll_rate"] - (time.time()-self.time_start)
+                if ts < 0:
+                    ts = 0
+                time.sleep(ts)
             
             tt = (time.time()-self.time_start)
             print "Total test time was: %f" % tt
@@ -232,7 +214,7 @@ class Control:
                 commands = remote_comms.checkCommands(self)
                 if commands is not None and commands.find("stopsampling") >= 0:
                     break
-                TS = float(counter)/self.secDivision - (time.time()-self.time_start)
+                TS = float(counter)/LOCAL_SETTINGS["poll_rate"] - (time.time()-self.time_start)
                 if TS < 0:
                     TS = 0
                 time.sleep(TS)
@@ -407,13 +389,12 @@ def mainProgram(remoteControl = True):
             while remoteControl:
                 #sampler_comms loop until got a start command
                 commString = sampler_comms.checkCommands(sampler_control)
-                if commString is not None and commString.find("startsampling") >= 0:
+                if commString is not None and "startsampling" in commString: #commString.find("startsampling") >= 0:
                     print "Heard something"
                     break
                 time.sleep(0.5)
         except KeyboardInterrupt:
             #print "Keyboard used to interrupt - do I need to close something here?"
-            
             sampler_control.close()
             sampler_comms.close()
             sys.exit()

@@ -15,24 +15,27 @@ class dP:   #data point
 
 def getLatestData():
     
-    fileLoc = r"C:\Users\simon.kitchen\Documents\Software\Sandbox\Python\Test_rig\Sampling\PiDatafiles"
+    #fileLoc = r"C:\Users\simon.kitchen\Documents\Software\Sandbox\Python\Test_rig\Sampling\PiDatafiles"
     #fileLoc = r"\\OWLSERV03\NewSTOUT\Server\temp\SK\LuCID\Pump and traps\trap flow test results complete"
+    fileLoc = r"C:\Users\simon.kitchen\Documents\Software\Sandbox\Python\Test_rig\Results\tenaxOnlyTests"
     
-    fList = []
-    for files in os.walk(fileLoc):
-        for filenames in files:
-            for filename in filenames:
-                if re.match("142[0-9]+\.txt", filename):   #if filename.find("trap") > -1 and filename.find("txt") > -1:  #if filename.find(re.search("trap[0-9]") > -1:
-                    fList.append(filename)
-                    #print filename
-
-    newestStamp = 0
-    for fileName in fList:
-        time_stamp = float(fileName.strip(r".txt"))
-        if time_stamp > newestStamp:
-            newestStamp = time_stamp
+    #fList = []
+    #for files in os.walk(fileLoc):
+    #    for filenames in files:
+    #        for filename in filenames:
+    #            if re.match("142[0-9]+\.txt", filename):   #if filename.find("trap") > -1 and filename.find("txt") > -1:  #if filename.find(re.search("trap[0-9]") > -1:
+    #                fList.append(filename)
+    #                #print filename
+    #
+    #newestStamp = 0
+    #for fileName in fList:
+    #    time_stamp = float(fileName.strip(r".txt"))
+    #    if time_stamp > newestStamp:
+    #        newestStamp = time_stamp
     
-    dataFile = open(fileLoc + '\\' + str(int(newestStamp)) + ".txt")
+    file_of_interest = "1429799568SN060021tenaxOnly2304CollectionData"
+    fileName = fileLoc + '\\' + file_of_interest + ".txt"
+    dataFile = open(fileName)
     allData = dataFile.read()
     #print allData
     allData.strip('\n')
