@@ -158,6 +158,7 @@ class Flow_sensor: #Should be rolled into CO2_sensor and just called input senso
             self.Available = False
         else:
             self.Available = True
+        #self.comm_link.write('S')    # sets the flow to approx 250ml/min
 
     def getReading(self):
         if self.Available == False:
@@ -165,7 +166,7 @@ class Flow_sensor: #Should be rolled into CO2_sensor and just called input senso
         self.comm_link.write('F')
         #print "written r to Arduino"
         Flow_raw = float(self.comm_link.readline() )
-        Flow = Flow_raw*0.489
+        Flow = Flow_raw*0.5221 + 1.625
         #print "got pressure"
         return Flow
     
@@ -174,19 +175,25 @@ class Flow_sensor: #Should be rolled into CO2_sensor and just called input senso
         if totalBreath == True and collecting != 0:    
             Vol = ((self.currentFlow+self.lastFlow)/120.0)*(self.current_time-self.lastTime)      # Flow measured in ml/min, 120 = 2*60
             self.totalVolume += Vol
+            self.pump_on_time += self.current_time-self.lastTime
+        elif totalBreath == False and collecting != 0:
+            Vol = ((self.currentFlow+self.lastFlow)/120.0)*(self.current_time-self.lastTime)      # Flow measured in ml/min, 120 = 2*60
+            self.totalVolume += Vol
+            self.pump_on_time += self.current_time-self.lastTime
         elif totalBreath == False:
             Vol = ((self.currentFlow+self.lastFlow)/120.0)*(self.current_time-self.lastTime)      # Flow measured in ml/min, 120 = 2*60
             self.totalVolume += Vol
-
+        
         self.lastTime = self.current_time
         self.lastFlow = self.currentFlow
-        return self.totalVolume
+        return self.totalVolume, self.pump_on_time
     
     def reset(self, start_time):
         self.lastTime = start_time
         self.current_time = start_time
         self.lastFlow = 0
         self.totalVolume = 0
+        self.pump_on_time = 0
 
 class Pressure_sensor: #Should be rolled into CO2_sensor and just called input sensor
     def __init__(self, connection, samplePeriod = 0.2):

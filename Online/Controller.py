@@ -21,8 +21,8 @@ import json
 #import csv     # Nice idea, not currently executed
 
 DEFAULT_SETTINGS = {
-    "tube_id":                  None
-    "sample_date_time":         None
+    "tube_id":                  None,
+    "sample_date_time":         None,
     "calibration_time":         20,
     "sample_collection_time":   2000,
     "collection_control":       "p",
@@ -45,13 +45,14 @@ DEFAULT_SETTINGS = {
 }
 
 LOCAL_SETTINGS = {
-    "CO2_address":          "/dev/ttyUSB0",
+    "CO2_address":          "/dev/ttyUSB1",
     "pressure_address":     "/dev/ttyACM0",
-    "pump_address":         "/dev/ttyUSB1",
+    "pump_address":         "/dev/ttyUSB0",
     "poll_rate":            5,
     "default_pump_voltage": 24,
     "default_pressure_trigger": 500,
     "default_CO2_trigger": 2.5,
+    "volume_per_second": 4.1,   # assumes 250ml/min collection rate - modify this as per requirements/setting on needle valve
 }
 
 
@@ -67,11 +68,11 @@ class Control:
                                           LOCAL_SETTINGS["pressure_address"],
                                           self.MFC,
                                           )
-        self.sensors.CO2.trigger_values = [DEFAULT_SETTINGS["default_CO2_trigger"],
-                                           DEFAULT_SETTINGS["default_CO2_trigger"]
+        self.sensors.CO2.trigger_values = [LOCAL_SETTINGS["default_CO2_trigger"],
+                                           LOCAL_SETTINGS["default_CO2_trigger"]
                                            ]
-        self.sensors.pressure.trigger_values = [DEFAULT_SETTINGS["default_pressure_trigger"],
-                                                DEFAULT_SETTINGS["default_pressure_trigger"]
+        self.sensors.pressure.trigger_values = [LOCAL_SETTINGS["default_pressure_trigger"],
+                                                LOCAL_SETTINGS["default_pressure_trigger"]
                                                 ]
         self.sample_pump = Pumps.output_controller(LOCAL_SETTINGS["pump_address"],
                                                    LOCAL_SETTINGS["default_pump_voltage"]
@@ -183,15 +184,22 @@ class Control:
             print "MFC is True"
             self.sensors.Flow.reset(self.time_start)
             current_volume = 0
+            pump_on_time = 0
+            interpolated_volume = 0
             time_stamp = self.time_start
-            while time_stamp-self.time_start <= test_length and current_volume < self.settings["collection_limit"]:
+            
+            #Handles collection limit - time and volume
+            
+            while time_stamp-self.time_start <= test_length and current_volume < self.settings["collection_limit"] and interpolated_volume < self.settings["collection_limit"]:
                 CO2, Pressure, Flow, time_stamp = self.sensors.getReadings(self)
-                current_volume = self.sensors.Flow.collectedVolume(self.settings["total_breath"], self.collecting)
+                current_volume, pump_on_time = self.sensors.Flow.collectedVolume(self.settings["total_breath"], self.collecting)
+                interpolated_volume = pump_on_time*LOCAL_SETTINGS["volume_per_second"]
                 counter = counter + 1
                 if counter%5.0 == 0:
+                    temp_vol = max(current_volume, interpolated_volume)
                     remote_comms.set_completion(test_length, self.settings["collection_limit"],
                                                 self.time_start, time_stamp,
-                                                current_volume
+                                                temp_vol
                                                 )
                 commands = remote_comms.checkCommands(self)
                 if commands is not None and commands.find("stopsampling") >= 0:
